@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspecciones de Seguridad Física · Now Logistics</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --sidebar-bg: #14203B;
+    --accent-blue: #3552D6;
+    --sec-green: #1C9A6C;
+    --sec-red: #D6483F;
+    --sec-yellow: #DD9A2E;
+    --ink: #171B2E;
+    --text-muted: #6B7280;
+    --bg-light: #F3F4F9;
+    --line: #E4E6EF;
+    --surface: #FFFFFF;
+    --font-display: 'Space Grotesk', 'Segoe UI', sans-serif;
+    --font-body: 'Inter', 'Segoe UI', sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin:0; font-family: var(--font-body); background: var(--bg-light); color: var(--ink); -webkit-font-smoothing: antialiased; }
+h1,h2,h3,h4 { font-family: var(--font-display); letter-spacing:-0.01em; }
+
+.topbar { background: var(--sidebar-bg); color:white; padding:16px 28px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; border-bottom:3px solid; border-image: linear-gradient(90deg, var(--accent-blue), var(--sec-red)) 1; }
+.topbar-left { display:flex; align-items:center; gap:14px; }
+.topbar-logo { width:40px; height:40px; border-radius:11px; background: linear-gradient(135deg, var(--accent-blue), var(--sec-red)); display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:700; font-size:17px; }
+.topbar h1 { font-size:17px; margin:0; font-weight:600; }
+.topbar .subtitle { font-size:12px; color:#9AA1B4; margin-top:3px; }
+
+.tabs-bar { display:flex; gap:4px; background:white; padding:8px 28px 0 28px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+.tab-btn { background:none; border:none; padding:12px 18px; font-size:14px; font-weight:600; font-family:var(--font-body); color:var(--text-muted); cursor:pointer; border-bottom:3px solid transparent; border-radius:8px 8px 0 0; transition:background .15s, color .15s; }
+.tab-btn:hover { background:var(--bg-light); color:var(--ink); }
+.tab-btn.active { color:var(--accent-blue); border-bottom-color:var(--accent-blue); background:#E9EDFC; }
+
+.main-content { padding:26px 28px 60px 28px; max-width:1100px; margin:0 auto; }
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+h2.panel-title { font-size:20px; margin:0 0 4px 0; font-weight:700; }
+p.panel-desc { color:var(--text-muted); font-size:13px; margin-top:0; margin-bottom:22px; }
+
+.card { background:var(--surface); border-radius:16px; padding:22px; box-shadow:0 1px 2px rgba(20,20,40,.04), 0 8px 20px -14px rgba(20,20,40,.25); border:1px solid var(--line); margin-bottom:20px; }
+.form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
+.form-grid label { display:block; font-size:11.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:5px; }
+.form-grid input, .form-grid select { width:100%; padding:9px 11px; border:1.5px solid var(--line); border-radius:9px; font-size:13.5px; font-family:var(--font-body); color:var(--ink); }
+.form-grid input:focus, .form-grid select:focus { outline:none; border-color:var(--accent-blue); }
+
+.puntaje-vivo { display:flex; align-items:center; gap:16px; background:var(--bg-light); border-radius:14px; padding:14px 18px; margin:18px 0; }
+.puntaje-vivo .num { font-family:var(--font-display); font-weight:700; font-size:26px; }
+.puntaje-vivo .detalle { font-size:12.5px; color:var(--text-muted); }
+.badge-nivel { display:inline-block; padding:3px 12px; border-radius:20px; font-size:11.5px; font-weight:700; color:white; }
+.badge-adecuado { background:var(--sec-green); }
+.badge-medio { background:var(--sec-yellow); }
+.badge-bajo { background:var(--sec-red); }
+
+.item-row { border-bottom:1px solid var(--line); padding:14px 2px; display:grid; grid-template-columns:34px 1fr; gap:12px; align-items:start; }
+.item-row:last-child { border-bottom:none; }
+.item-num { font-family:var(--font-display); font-weight:700; color:var(--text-muted); font-size:13px; padding-top:4px; }
+.item-nombre { font-weight:600; font-size:14px; margin-bottom:8px; }
+.item-controles { display:flex; gap:18px; flex-wrap:wrap; margin-bottom:8px; }
+.btn-group { display:flex; border:1.5px solid var(--line); border-radius:9px; overflow:hidden; }
+.btn-group button { background:white; border:none; padding:7px 14px; font-size:12.5px; font-weight:600; font-family:var(--font-body); color:var(--text-muted); cursor:pointer; border-right:1px solid var(--line); }
+.btn-group button:last-child { border-right:none; }
+.btn-group.condicion button.activo[data-val="adecuado"] { background:#E3F5EC; color:#0F6B48; }
+.btn-group.condicion button.activo[data-val="mejorar"] { background:#FEF3C7; color:#92400E; }
+.btn-group.valoracion button.activo[data-val="ok"] { background:var(--sec-green); color:white; }
+.btn-group.valoracion button.activo[data-val="corregir"] { background:var(--sec-red); color:white; }
+.item-especifique { width:100%; padding:7px 10px; border:1.5px solid var(--line); border-radius:8px; font-size:12.5px; font-family:var(--font-body); }
+
+.btn-primario { background:var(--ink); color:white; border:none; padding:12px 22px; border-radius:10px; cursor:pointer; font-weight:600; font-size:14px; font-family:var(--font-body); }
+.btn-primario:hover { background:#262c48; }
+.btn-secundario { background:var(--accent-blue); color:white; border:none; padding:12px 22px; border-radius:10px; cursor:pointer; font-weight:600; font-size:14px; font-family:var(--font-body); }
+.btn-chico { background:var(--bg-light); border:1px solid var(--line); padding:6px 12px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:600; color:var(--ink); }
+.btn-chico.rojo { color:var(--sec-red); }
+
+.kpi-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-bottom:24px; }
+.kpi-card { background:var(--surface); border-radius:16px; padding:18px 20px; box-shadow:0 1px 2px rgba(20,20,40,.04), 0 8px 20px -14px rgba(20,20,40,.25); border:1px solid var(--line); }
+.kpi-card h4 { margin:0 0 6px 0; font-size:11.5px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; }
+.kpi-card .val { font-family:var(--font-display); font-weight:700; font-size:22px; }
+.kpi-card .sub { font-size:12px; color:var(--text-muted); margin-top:3px; }
+
+.gauge-wrap { display:flex; align-items:center; gap:26px; flex-wrap:wrap; }
+.gauge { width:180px; height:180px; border-radius:50%; position:relative; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.gauge::before { content:""; position:absolute; inset:0; border-radius:50%; background:conic-gradient(var(--gauge-color,var(--sec-green)) calc(var(--gauge-pct,0)*1%), var(--line) 0); mask:radial-gradient(farthest-side, transparent calc(100% - 18px), #000 calc(100% - 17px)); -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 18px), #000 calc(100% - 17px)); }
+.gauge span { position:relative; font-family:var(--font-display); font-weight:700; font-size:34px; }
+
+table.tabla-simple { width:100%; border-collapse:collapse; font-size:13px; }
+table.tabla-simple th { background:var(--sidebar-bg); color:white; padding:8px 10px; text-align:left; font-size:11.5px; }
+table.tabla-simple td { padding:8px 10px; border-bottom:1px solid var(--line); }
+
+.chart-box { background:var(--surface); border-radius:16px; padding:20px; box-shadow:0 1px 2px rgba(20,20,40,.04), 0 8px 20px -14px rgba(20,20,40,.25); border:1px solid var(--line); margin-bottom:18px; }
+.chart-box h3 { margin:0 0 14px 0; font-size:13.5px; }
+
+.aviso-demo { background:#FBEEE2; border:1px solid #E8C4A0; border-left:4px solid var(--sec-red); border-radius:12px; padding:12px 16px; font-size:12.5px; color:#6B3A14; margin-bottom:20px; }
+
+.filtro-bar { display:flex; align-items:center; gap:10px; margin-bottom:18px; flex-wrap:wrap; }
+.filtro-bar label { font-size:12px; font-weight:600; color:var(--text-muted); }
+.filtro-bar select { padding:8px 12px; border:1.5px solid var(--line); border-radius:9px; font-size:13px; font-family:var(--font-body); background:white; }
+
+.chip { display:inline-flex; align-items:center; gap:5px; background:var(--bg-light); border:1px solid var(--line); border-radius:20px; padding:5px 12px; font-size:12px; font-weight:600; color:var(--ink); }
+.chip-admin { background:#FCEEE9; color:#C2620F; border-color:#F3D2BE; }
+
+.login-wrap { position:fixed; inset:0; background:var(--sidebar-bg); display:flex; align-items:center; justify-content:center; z-index:100; padding:20px; }
+.login-card { background:white; border-radius:18px; padding:32px 30px; width:100%; max-width:360px; box-shadow:0 20px 60px rgba(0,0,0,.35); }
+.login-card h2 { margin:0 0 4px 0; font-size:19px; }
+.login-card p.login-sub { color:var(--text-muted); font-size:13px; margin:0 0 20px 0; }
+.login-card label { display:block; font-size:11.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; margin:14px 0 5px 0; }
+.login-card select, .login-card input { width:100%; padding:10px 12px; border:1.5px solid var(--line); border-radius:9px; font-size:14px; font-family:var(--font-body); }
+.login-error { background:#FBEEE2; color:#8A2E1F; border-radius:8px; padding:8px 12px; font-size:12.5px; margin-top:12px; display:none; }
+.login-card .btn-primario { width:100%; margin-top:20px; }
+
+.kpi-trend-up { color:var(--sec-green); font-weight:700; }
+.kpi-trend-down { color:var(--sec-red); font-weight:700; }
+
+@media print {
+    .topbar, .tabs-bar, .no-print { display:none !important; }
+    .tab-panel { display:none !important; }
+    .tab-panel.active { display:block !important; }
+    .main-content { padding:0; max-width:100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+    <div class="topbar-left">
+        <div class="topbar-logo">NL</div>
+        <div>
+            <h1>Inspecciones de Seguridad</h1>
+            <div class="subtitle">Now Logistics · Prototipo — datos guardados solo en este navegador</div>
+        </div>
+    </div>
+    <div id="topbarSesion" style="display:flex; align-items:center; gap:10px;"></div>
+</div>
+
+<!-- ============ PANTALLA DE LOGIN ============ -->
+<div id="pantallaLogin" class="login-wrap">
+    <div class="login-card">
+        <h2>🔒 Iniciar sesión</h2>
+        <p class="login-sub">Elige tu usuario para continuar con las inspecciones.</p>
+        <label>Usuario</label>
+        <select id="loginUsuario" onchange="onCambiarLoginUsuario()">
+            <option value="">Selecciona tu usuario...</option>
+        </select>
+        <div id="loginNombreGenericoWrap" style="display:none;">
+            <label>Tu nombre (para la bitácora)</label>
+            <input id="loginNombreGenerico" placeholder="Ej: nombre del pasante">
+        </div>
+        <label>Contraseña</label>
+        <input id="loginPassword" type="password" onkeydown="if(event.key==='Enter') intentarLogin();">
+        <div id="loginError" class="login-error"></div>
+        <button class="btn-primario" onclick="intentarLogin()">Entrar</button>
+    </div>
+</div>
+
+<div id="appContenido" style="display:none;">
+<div class="tabs-bar">
+    <button class="tab-btn" id="tabBtnNueva" onclick="mostrarTab('nueva')" style="display:none;">📋 Nueva Inspección</button>
+    <button class="tab-btn active" id="tabBtnInicio" onclick="mostrarTab('inicio')">🏢 Empezar</button>
+    <button class="tab-btn" id="tabBtnHistorial" onclick="mostrarTab('historial')">🗂️ Historial</button>
+    <button class="tab-btn" id="tabBtnDashboard" onclick="mostrarTab('dashboard')">📊 Dashboard</button>
+    <button class="tab-btn" id="tabBtnComparativa" onclick="mostrarTab('comparativa')">📅 Comparativa</button>
+    <button class="tab-btn" id="tabBtnTipos" onclick="mostrarTab('tipos')" style="display:none;">⚙️ Tipos de Inspección</button>
+    <button class="tab-btn" id="tabBtnBitacora" onclick="mostrarTab('bitacora')">🧾 Bitácora</button>
+    <button class="tab-btn" id="tabBtnDetalle" onclick="mostrarTab('detalle')" style="display:none;">🔎 Detalle</button>
+</div>
+
+<div class="main-content">
+
+    <div class="aviso-demo no-print">
+        ⚠️ <strong>Prototipo de demostración.</strong> Guarda los datos en este navegador (localStorage), no en Supabase todavía. Sirve para que pruebes cómo se sentiría el flujo antes de construir la versión conectada a tu base de datos real.
+    </div>
+
+    <!-- ============ EMPEZAR: elegir empresa e inspección ============ -->
+    <div id="panelInicio" class="tab-panel active">
+        <h2 class="panel-title">🏢 ¿Qué inspección vas a hacer?</h2>
+        <p class="panel-desc">Elige primero la empresa y luego el tipo de inspección para empezar a llenarla.</p>
+
+        <div class="card">
+            <div class="form-grid" style="margin-bottom:6px;">
+                <div>
+                    <label>Empresa</label>
+                    <select id="fInicioEmpresa" onchange="poblarSelectorTipoPorEmpresa()">
+                        <option value="">Selecciona una empresa...</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Inspección</label>
+                    <select id="fInicioTipo">
+                        <option value="">Primero elige una empresa</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn-primario" style="margin-top:10px;" onclick="empezarInspeccionDesdeInicio()">Empezar inspección →</button>
+        </div>
+
+        <div id="resumenTiposPorEmpresa"></div>
+    </div>
+
+    <!-- ============ NUEVA INSPECCIÓN ============ -->
+    <div id="panelNueva" class="tab-panel">
+        <div class="no-print" style="margin-bottom:10px;">
+            <button class="btn-chico" onclick="mostrarTab('inicio')">← Cambiar empresa / inspección</button>
+        </div>
+        <h2 class="panel-title" id="nuevaTituloInspeccion">📋 Nueva Inspección</h2>
+        <p class="panel-desc" id="nuevaSubtituloInspeccion"></p>
+
+        <div class="card">
+            <div class="form-grid">
+                <div>
+                    <label>Nave / Ubicación</label>
+                    <input id="fNuevaNave" list="listaNaves" placeholder="Ej: Nave 3 — Zona Franca">
+                    <datalist id="listaNaves"></datalist>
+                </div>
+                <div>
+                    <label>Realizado por</label>
+                    <input id="fNuevaRealizadoPor" placeholder="Nombre del inspector">
+                </div>
+                <div>
+                    <label>Fecha</label>
+                    <input id="fNuevaFecha" type="date">
+                </div>
+                <div>
+                    <label>Hora inicio</label>
+                    <input id="fNuevaHora" type="time">
+                </div>
+                <div>
+                    <label>Lugar inicio</label>
+                    <input id="fNuevaLugar" placeholder="Ej: Recibo">
+                </div>
+            </div>
+
+            <div class="puntaje-vivo">
+                <div class="gauge" style="width:64px; height:64px;" id="gaugeVivo"><span id="gaugeVivoTexto" style="font-size:14px;">0%</span></div>
+                <div>
+                    <div class="num" id="puntajeVivoNum">0.0 / 100</div>
+                    <div class="detalle" id="puntajeVivoDetalle">0 marcados de 40 · <span class="badge-nivel badge-bajo" id="puntajeVivoNivel">Sin datos</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" id="cardChecklistFijo">
+            <h3 style="margin-top:0; font-size:14px;">Checklist</h3>
+            <div id="listaItemsFormulario"></div>
+        </div>
+
+        <div class="card" id="cardMuestreo" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0; font-size:14px;">Registros de la muestra</h3>
+                <button class="btn-secundario" style="padding:8px 16px; font-size:13px;" onclick="agregarFilaMuestreo()">➕ Agregar fila</button>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="tabla-simple" id="tablaMuestreo" style="min-width:600px;">
+                    <thead><tr id="theadMuestreo"></tr></thead>
+                    <tbody id="tbodyMuestreo"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <label style="display:block; font-size:11.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:8px;">Observaciones generales</label>
+            <textarea id="fNuevaObservaciones" style="width:100%; min-height:80px; padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-family:var(--font-body); font-size:13.5px; resize:vertical;" placeholder="Contexto adicional, hallazgos relevantes, seguimiento acordado..."></textarea>
+        </div>
+
+        <button class="btn-primario" onclick="guardarInspeccion()">💾 Guardar inspección</button>
+    </div>
+
+    <!-- ============ TIPOS DE INSPECCIÓN ============ -->
+    <div id="panelTipos" class="tab-panel">
+        <h2 class="panel-title">⚙️ Tipos de Inspección</h2>
+        <p class="panel-desc">Aquí defines el catálogo de inspecciones (hasta tus 24) y a qué empresa(s) aplica cada una. Una vez creada, aparece disponible en "Empezar".</p>
+
+        <div class="card">
+            <h3 style="margin-top:0; font-size:14px;">Agregar nueva inspección</h3>
+            <div class="form-grid">
+                <div style="grid-column:1/-1;">
+                    <label>Nombre de la inspección</label>
+                    <input id="fTipoNombre" placeholder="Ej: Inspección de Extintores">
+                </div>
+                <div>
+                    <label>N.° de documento (opcional)</label>
+                    <input id="fTipoDocumento" placeholder="Ej: NOW-SGS-FRM-12">
+                </div>
+            </div>
+            <div style="margin:14px 0;">
+                <label style="display:block; font-size:11.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;">Empresas a las que aplica</label>
+                <div id="checkboxesEmpresaTipo" style="display:flex; gap:16px; flex-wrap:wrap;"></div>
+            </div>
+
+            <div style="margin:14px 0;">
+                <label style="display:block; font-size:11.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;">Estructura de la inspección</label>
+                <div style="display:flex; gap:16px;">
+                    <label style="font-size:13px;"><input type="radio" name="fTipoModo" value="checklist" checked onchange="cambiarModoConstructorTipo()"> Checklist fijo (misma lista de elementos siempre)</label>
+                    <label style="font-size:13px;"><input type="radio" name="fTipoModo" value="muestreo" onchange="cambiarModoConstructorTipo()"> Muestreo por filas (áreas/equipos/personas variables por visita)</label>
+                </div>
+            </div>
+
+            <!-- ---- Constructor: CHECKLIST FIJO ---- -->
+            <div id="constructorChecklistTipo">
+                <div class="form-grid" style="margin-bottom:6px;">
+                    <div>
+                        <label>Etiquetas de la marca a evaluar</label>
+                        <select id="fTipoPresetEtiquetas" onchange="cambiarPresetEtiquetas()">
+                            <option value="si_no">Sí / No</option>
+                            <option value="ok_corregir">Ok / Corregir</option>
+                            <option value="ok_hallazgo">Ok / Hallazgo</option>
+                            <option value="personalizado">Personalizado...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Puntos totales</label>
+                        <input id="fTipoPuntosTotales" type="number" value="100">
+                    </div>
+                </div>
+                <div class="form-grid" id="filaEtiquetasPersonalizadas" style="display:none; margin-bottom:6px;">
+                    <div><label>Etiqueta positiva</label><input id="fTipoEtiquetaPos" placeholder="Ej: Cumple"></div>
+                    <div><label>Etiqueta negativa</label><input id="fTipoEtiquetaNeg" placeholder="Ej: No cumple"></div>
+                </div>
+                <div style="margin:10px 0;">
+                    <label style="font-size:13px;"><input type="checkbox" id="fTipoTieneCondicion" onchange="toggleCondicionTipo()"> Agregar además una columna de "Condición" (ej. Adecuado / Mejorar), como en Seguridad Física</label>
+                </div>
+                <div class="form-grid" id="filaCondicionPersonalizada" style="display:none; margin-bottom:10px;">
+                    <div><label>Etiqueta de condición positiva</label><input id="fTipoCondPos" value="Adecuado"></div>
+                    <div><label>Etiqueta de condición negativa</label><input id="fTipoCondNeg" value="Mejorar"></div>
+                </div>
+                <div style="margin:14px 0;">
+                    <label style="display:block; font-size:11.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;">Elementos a inspeccionar (uno por línea)</label>
+                    <p style="font-size:11.5px; color:var(--text-muted); margin:0 0 6px 0;">Para agrupar en secciones (como "I. EPP"), escribe una línea que empiece con <strong>##</strong>. Para agregar una pista de "Especifique" a un elemento, ponla después de una barra vertical: <code>Elemento | pista</code>.</p>
+                    <textarea id="fTipoElementos" style="width:100%; min-height:160px; padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-family:var(--font-body); font-size:13px; resize:vertical;" placeholder="## Área de recibo&#10;Extintor tipo ABC cargado y señalizado&#10;Señalización de ruta de evacuación&#10;## Área de despacho&#10;Extintor tipo CO2 — servidores | marca y capacidad&#10;..."></textarea>
+                </div>
+            </div>
+
+            <!-- ---- Constructor: MUESTREO POR FILAS ---- -->
+            <div id="constructorMuestreoTipo" style="display:none;">
+                <div style="margin:14px 0;">
+                    <label style="display:block; font-size:11.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;">Columnas descriptivas (una por línea, ej. "Área inspeccionada")</label>
+                    <textarea id="fTipoColumnasDescriptivas" style="width:100%; min-height:60px; padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-family:var(--font-body); font-size:13px; resize:vertical;" placeholder="Área inspeccionada"></textarea>
+                </div>
+
+                <div style="margin:14px 0;">
+                    <label style="display:block; font-size:11.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;">Columnas de evaluación (lo que se marca en cada fila)</label>
+                    <div id="listaColumnasEvaluacionTipo" style="margin-bottom:10px;"></div>
+                    <div class="form-grid" style="align-items:end;">
+                        <div>
+                            <label>Tipo de columna</label>
+                            <select id="fNuevaColEvalTipo" onchange="toggleCamposColEval()">
+                                <option value="si_no">Sí / No (o personalizado)</option>
+                                <option value="conteo">Conteo (total vs. cumple)</option>
+                            </select>
+                        </div>
+                        <div id="campoColEvalEtiqueta"><label>Etiqueta de la pregunta</label><input id="fNuevaColEvalLabel" placeholder="Ej: Clave de acceso no visible"></div>
+                    </div>
+                    <div class="form-grid" id="camposColEvalSiNo" style="margin-top:6px;">
+                        <div><label>Etiqueta positiva</label><input id="fNuevaColEvalPos" value="Sí"></div>
+                        <div><label>Etiqueta negativa</label><input id="fNuevaColEvalNeg" value="No"></div>
+                    </div>
+                    <div class="form-grid" id="camposColEvalConteo" style="margin-top:6px; display:none;">
+                        <div><label>Etiqueta del total</label><input id="fNuevaColEvalTotal" placeholder="Ej: Cantidad de personas en el área"></div>
+                        <div><label>Etiqueta de lo que cumple</label><input id="fNuevaColEvalCumple" placeholder="Ej: Cantidad con identificación visible"></div>
+                    </div>
+                    <button class="btn-chico" style="margin-top:8px;" onclick="agregarColumnaEvaluacionTipo()">➕ Agregar esta columna</button>
+                </div>
+
+                <div style="margin:14px 0;">
+                    <label style="display:block; font-size:11.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;">Columna de observaciones</label>
+                    <input id="fTipoColumnaObservacion" placeholder="Ej: Acciones ejecutadas">
+                </div>
+            </div>
+
+            <div style="margin-top:16px;">
+                <button class="btn-secundario" id="btnGuardarTipo" onclick="agregarTipoInspeccion()">➕ Agregar al catálogo</button>
+                <button class="btn-chico" onclick="cancelarEdicionTipo()">Cancelar</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-top:0; font-size:14px;">Catálogo actual</h3>
+            <div id="listaTiposCatalogo"></div>
+        </div>
+    </div>
+
+    <!-- ============ BITÁCORA ============ -->
+    <div id="panelBitacora" class="tab-panel">
+        <h2 class="panel-title">🧾 Bitácora de Trazabilidad</h2>
+        <p class="panel-desc">Registro de quién creó, editó o eliminó cada inspección y cada tipo del catálogo — para auditoría.</p>
+        <div class="card" style="padding:0; overflow:auto;">
+            <table class="tabla-simple">
+                <thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr></thead>
+                <tbody id="tbodyBitacora"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ============ HISTORIAL ============ -->
+    <div id="panelHistorial" class="tab-panel">
+        <h2 class="panel-title">🗂️ Historial de Inspecciones</h2>
+        <p class="panel-desc">Todas las inspecciones guardadas, con su puntaje y nivel de cumplimiento.</p>
+        <div class="card" style="padding:0; overflow:auto;">
+            <table class="tabla-simple">
+                <thead><tr><th>Fecha</th><th>Empresa</th><th>Inspección</th><th>Nave/Ubicación</th><th>Realizado por</th><th>Puntaje</th><th>Nivel</th><th>Acciones</th></tr></thead>
+                <tbody id="tbodyHistorial"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ============ DASHBOARD ============ -->
+    <div id="panelDashboard" class="tab-panel">
+        <h2 class="panel-title">📊 Dashboard de Cumplimiento</h2>
+        <p class="panel-desc">Vista general de todas las inspecciones registradas.</p>
+        <div id="dashboardVacio" style="display:none;" class="card">Todavía no hay inspecciones guardadas. Completa una en "Nueva Inspección" para ver el dashboard.</div>
+        <div id="dashboardContenido">
+            <div class="kpi-cards" id="kpiCardsDashboard"></div>
+            <div class="chart-box"><h3>Tendencia de cumplimiento en el tiempo</h3><div style="position:relative; height:280px;"><canvas id="chartTendencia"></canvas></div></div>
+            <div class="chart-box"><h3>Promedio de cumplimiento por Empresa</h3><div style="position:relative; height:280px;"><canvas id="chartPorEmpresa"></canvas></div></div>
+            <div class="chart-box"><h3>Promedio de cumplimiento por Nave / Ubicación</h3><div style="position:relative; height:280px;"><canvas id="chartPorNave"></canvas></div></div>
+            <div class="chart-box"><h3>Elementos que más se repiten como "Corregir"</h3><div style="position:relative; height:300px;"><canvas id="chartRecurrentes"></canvas></div></div>
+        </div>
+    </div>
+
+    <!-- ============ COMPARATIVA POR AÑO ============ -->
+    <div id="panelComparativa" class="tab-panel">
+        <h2 class="panel-title">📅 Comparativa por Año</h2>
+        <p class="panel-desc">Compara el cumplimiento entre años para ver si vamos mejorando o empeorando.</p>
+        <div id="comparativaVacio" style="display:none;" class="card">Todavía no hay suficientes inspecciones para comparar por año. Completa algunas primero.</div>
+        <div id="comparativaContenido">
+            <div class="filtro-bar">
+                <label>Empresa:</label>
+                <select id="filtroComparativaEmpresa" onchange="renderComparativa()"><option value="todas">Todas las empresas</option></select>
+                <label>Inspección:</label>
+                <select id="filtroComparativaTipo" onchange="renderComparativa()"><option value="todos">Todas los tipos</option></select>
+            </div>
+            <div class="kpi-cards" id="kpiCardsComparativa"></div>
+            <div class="chart-box"><h3>Cumplimiento promedio por año</h3><div style="position:relative; height:280px;"><canvas id="chartPorAnio"></canvas></div></div>
+            <div class="chart-box"><h3>Comparativa mes a mes entre años</h3><div style="position:relative; height:300px;"><canvas id="chartMensualPorAnio"></canvas></div></div>
+            <div class="chart-box">
+                <h3>Detalle por año</h3>
+                <div style="overflow:auto;">
+                    <table class="tabla-simple">
+                        <thead><tr><th>Año</th><th>Inspecciones</th><th>Promedio</th><th>Nivel</th><th>Vs. año anterior</th></tr></thead>
+                        <tbody id="tbodyComparativaAnio"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ DETALLE / IMPRIMIR ============ -->
+    <div id="panelDetalle" class="tab-panel">
+        <div class="no-print" style="margin-bottom:16px;">
+            <button class="btn-chico" onclick="mostrarTab('historial')">← Volver al historial</button>
+            <button class="btn-primario" style="margin-left:8px; padding:8px 16px; font-size:13px;" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+        </div>
+        <div id="detalleContenido"></div>
+    </div>
+
+</div>
+</div>
+
+<script>
+/* ==================== DATOS DEL FORMULARIO NOW-SGS-FRM-28 ====================
+   Estructurado como "tipo de inspección" para que en el futuro se puedan agregar
+   otros formularios (ej. inspección de incendios, de EPP, etc.) sin tocar esto. */
+const CHECKLIST_SEG_FISICA = [
+    {id:1, nombre:"Puerta entrada principal"},
+    {id:2, nombre:"Puertas de almacén"},
+    {id:3, nombre:"Puertas de oficinas"},
+    {id:4, nombre:"Puertas de emergencia"},
+    {id:5, nombre:"Rampas de montacargas"},
+    {id:6, nombre:"Rampas de carga y descarga"},
+    {id:7, nombre:"Rampa de desperdicios"},
+    {id:8, nombre:"Ventanas en recibo"},
+    {id:9, nombre:"Ventanas en despacho"},
+    {id:10, nombre:"Ventanas en almacén"},
+    {id:11, nombre:"Ventanas en oficinas"},
+    {id:12, nombre:"Cercas de almacén"},
+    {id:13, nombre:"Cerca de recibo"},
+    {id:14, nombre:"Cerca de despacho"},
+    {id:15, nombre:"Columnas"},
+    {id:16, nombre:"Piso"},
+    {id:17, nombre:"Techo"},
+    {id:18, nombre:"Anaqueles"},
+    {id:19, nombre:"Esquineros de protección de anaqueles"},
+    {id:20, nombre:"Iluminación perimetral"},
+    {id:21, nombre:"Iluminación interna"},
+    {id:22, nombre:"Lectores de huellas"},
+    {id:23, nombre:"Sistema de control de accesos"},
+    {id:24, nombre:"Proceso de control de accesos"},
+    {id:25, nombre:"Cámaras de seguridad"},
+    {id:26, nombre:"Sistema de alarma de seguridad"},
+    {id:27, nombre:"Generadores eléctricos"},
+    {id:28, nombre:"Inversores"},
+    {id:29, nombre:"Parqueos"},
+    {id:30, nombre:"Vegetación"},
+    {id:31, nombre:"Libros de registro de visitas"},
+    {id:32, nombre:"Libros de registro de paquetes y correspondencias"},
+    {id:33, nombre:"Carnés de visitantes", pistaEspecifique:"Cantidad asignada / Cantidad existencia"},
+    {id:34, nombre:"Carnés de contratistas", pistaEspecifique:"Cantidad asignada / Cantidad existencia"},
+    {id:35, nombre:"Carnés provisionales", pistaEspecifique:"Cantidad asignada / Cantidad existencia"},
+    {id:36, nombre:"Área de Servidores"},
+    {id:37, nombre:"Extractores de pared"},
+    {id:38, nombre:"Señalizaciones"},
+    {id:39, nombre:"Trampas de Roedores"},
+    {id:40, nombre:"Validación y Arqueo de casilleros", pistaEspecifique:"# de casilleros revisados"}
+];
+
+const EMPRESAS = ["Now Logistics", "Notions Dominicana", "Global Technology Group"];
+
+const TIPO_SEG_FISICA = { id:"seg_fisica", nombre:"Inspección de Seguridad Física", documento:"NOW-SGS-FRM-28", puntosPorItem:2.5, empresas:["Now Logistics"], checklist: CHECKLIST_SEG_FISICA, integrado:true, tieneCondicion:true, etiquetaCondicionPositiva:"Adecuado", etiquetaCondicionNegativa:"Mejorar", etiquetaValoracionPositiva:"Ok", etiquetaValoracionNegativa:"Corregir" };
+
+/* ---- Inspección General por Departamentos: NOW Logistics y Global Technology Group
+   comparten exactamente el mismo checklist de 64 elementos (solo cambia el documento
+   y la empresa), así que se arma una sola lista y se reutiliza para las dos. ---- */
+const CHECKLIST_GRAL_NOW_GTG = [
+    {id:1, seccion:"I. Equipos de Protección Personal y Colectivos", nombre:"¿Están los cascos en buen estado y los usan?"},    {id:2, seccion:"I. Equipos de Protección Personal y Colectivos", nombre:"¿Están las gafas en buen estado y las usan?"},    {id:3, seccion:"I. Equipos de Protección Personal y Colectivos", nombre:"¿Poseen todos protectores auditivos y los usan?"},    {id:4, seccion:"I. Equipos de Protección Personal y Colectivos", nombre:"¿Están las mascarillas en buen estado y las usan?"},    {id:5, seccion:"I. Equipos de Protección Personal y Colectivos", nombre:"¿Poseen todos calzados de seguridad y los usan?"},    {id:6, seccion:"I. Equipos de Protección Personal y Colectivos", nombre:"¿Poseen todos guantes de seguridad y los usan?"},    {id:7, seccion:"I. Equipos de Protección Personal y Colectivos", nombre:"¿Está el arnés o cinturón del área bueno y lo usan?"},    {id:8, seccion:"I. Equipos de Protección Personal y Colectivos", nombre:"¿Poseen todos fajas de seguridad y las usan?"},    {id:9, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de saltar desde partes elevadas?"},    {id:10, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de trabajar en alturas sin protección?"},    {id:11, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de lanzar piezas, materiales u objetos?"},    {id:12, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de ingresar a zonas restringidas?"},    {id:13, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de correr por los pasillos o escaleras?"},    {id:14, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de fumar dentro de la empresa?"},    {id:15, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de hacer juegos de mano e inapropiado?"},    {id:16, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de eliminar las guardas de seguridad?"},    {id:17, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de introducir las manos en máquinas en movimiento?"},    {id:18, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de exponerse a riesgos sin los equipos de protección asignados?"},    {id:19, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de encender equipos que están fuera de servicio?"},    {id:20, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de ingresar armas, alcohol y otras sustancias controladas?"},    {id:21, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de trabajar bajo efectos de alcohol y otras sustancias controladas?"},    {id:22, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se aseguran y controlan los accesos en el área?"},    {id:23, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se escolta a personas externas que vienen al área?"},    {id:24, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se usa el carné de identificación y se valida visitantes?"},    {id:25, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Están desobstruidos y en buen estado los pasillos?"},    {id:26, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Están desobstruidos: extintores, botiquines, salidas?"},    {id:27, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Está el área organizada y limpia?"},    {id:28, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Están los equipos y máquinas limpios?"},    {id:29, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Está el área libre de derrames, plásticos o papeles en el piso?"},    {id:30, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Está la infraestructura del área en buen estado?"},    {id:31, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Está el área libre de ruidos fuertes y constantes?"},    {id:32, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Está la iluminación del área en buen estado?"},    {id:33, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Están los productos almacenados correctamente?"},    {id:34, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Está la limpieza de neveritas del área actualizada?"},    {id:35, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Está la limpieza de los baños del área actualizada?"},    {id:36, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Poseen los químicos del área su identificación?"},    {id:37, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Poseen los químicos del área señalización de riesgo?"},    {id:38, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Se tiene en el área de químicos la bandeja de SDS?"},    {id:39, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Está la estación de primeros auxilios correctamente?"},    {id:40, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Está desobstruida y libre la salida de emergencias?"},    {id:41, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Están las máquinas funcionando correctamente?"},    {id:42, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Tienen las máquinas sus guardas de seguridad?"},    {id:43, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Están las correas, engranajes, poleas correctamente?"},    {id:44, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Están las instalaciones eléctricas correctamente?"},    {id:45, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Están las máquinas sin liqueos o escapes?"},    {id:46, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Están las inspecciones de máquinas/equipos al día?"},    {id:47, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Están las advertencias de seguridad en buen estado?"},    {id:48, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Poseen las máquinas del área su identificación?"},    {id:49, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Están los controles de accesos funcionando?"},    {id:50, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Están las sillas del área en buen estado?"},    {id:51, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Están las mesas del área en buen estado?"},    {id:52, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Están las computadoras del área en buen estado?"},    {id:53, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Está el aire acondicionado del área funcionando?"},    {id:54, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Está el extintor del área cargado y señalizado?"},    {id:55, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Está la ruta de evacuación del área señalizada?"},    {id:56, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Está el pulsador de alarma del área correctamente?"},    {id:57, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Está la luz de emergencia del área funcionando?"},    {id:58, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Está el lavaojos de emergencias funcionando?"},    {id:59, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Utilizan los brigadistas y comité su identificación?"},    {id:60, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Está la inspección del botiquín del área actualizada?"},    {id:61, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Está el departamento libre de accidentes laborales?"},    {id:62, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Se notifican los accidentes usando el formulario?"},    {id:63, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Se notifican los incidentes usando el formulario?"},    {id:64, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Se notifican las averías y se toman las correcciones?"}
+];
+const TIPO_GRAL_NOW = { id:"gral_now", nombre:"Inspección General por Departamentos", documento:"NOW-SGS-FRM-11", puntosPorItem:Number((100/64).toFixed(3)), empresas:["Now Logistics"], checklist: CHECKLIST_GRAL_NOW_GTG, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No" };
+const TIPO_GRAL_GTG = { id:"gral_gtg", nombre:"Inspección General por Departamentos", documento:"GTG-SGS-FRM-11", puntosPorItem:Number((100/64).toFixed(3)), empresas:["Global Technology Group"], checklist: CHECKLIST_GRAL_NOW_GTG, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No" };
+
+/* ---- Inspección General por Departamentos: Notions Dominicana (checklist propio, más corto) ---- */
+const CHECKLIST_GRAL_NTD = [
+    {id:1, seccion:"I. Equipos de Protección Personal y Colectivos", nombre:"¿Poseen en el área mascarillas y las usan?"},    {id:2, seccion:"I. Equipos de Protección Personal y Colectivos", nombre:"¿Poseen en el área guantes y los usan?"},    {id:3, seccion:"I. Equipos de Protección Personal y Colectivos", nombre:"¿Poseen en el área lentes y los usan?"},    {id:4, seccion:"I. Equipos de Protección Personal y Colectivos", nombre:"¿Poseen en el área protectores auditivos y los usan?"},    {id:5, seccion:"I. Equipos de Protección Personal y Colectivos", nombre:"¿Poseen en el área zapatos de seguridad y los usan?"},    {id:6, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de saltar desde partes elevadas?"},    {id:7, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de lanzar piezas, materiales u objetos?"},    {id:8, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de ingresar a zonas restringidas?"},    {id:9, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de correr por los pasillos o escaleras?"},    {id:10, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de fumar dentro de la empresa?"},    {id:11, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de hacer juegos de mano e inapropiado?"},    {id:12, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de exponerse a riesgos sin los equipos de protección asignados?"},    {id:13, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de ingresar armas, alcohol y otras sustancias controladas?"},    {id:14, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se abstiene de trabajar bajo efectos de alcohol y otras sustancias controladas?"},    {id:15, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se aseguran y controlan los accesos en el área?"},    {id:16, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se escolta a personas externas que vienen al área?"},    {id:17, seccion:"II. Actos Inseguros y No Autorizados", nombre:"¿Se usa el carné de identificación y se valida visitantes?"},    {id:18, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Están desobstruidos y en buen estado los pasillos?"},    {id:19, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Están desobstruidos: extintores, botiquines, salidas?"},    {id:20, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Está el área organizada y limpia?"},    {id:21, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Están los equipos y máquinas limpios?"},    {id:22, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Está el área libre de derrames, plásticos o papeles en el piso?"},    {id:23, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Está la infraestructura del área en buen estado?"},    {id:24, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Está la iluminación del área en buen estado?"},    {id:25, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Están los productos almacenados correctamente?"},    {id:26, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Está la limpieza de neveritas del área actualizada?"},    {id:27, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Está la limpieza de los baños del área actualizada?"},    {id:28, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Poseen los químicos del área su identificación?"},    {id:29, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Poseen los químicos del área señalización de riesgo?"},    {id:30, seccion:"III. Higiene, Organización y Estandarización", nombre:"¿Está desobstruida y libre la salida de emergencias?"},    {id:31, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Están las instalaciones eléctricas correctamente?"},    {id:32, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Están los controles de accesos funcionando?"},    {id:33, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Están las sillas del área en buen estado?"},    {id:34, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Están las mesas del área en buen estado?"},    {id:35, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Están las computadoras del área en buen estado?"},    {id:36, seccion:"IV. Máquinas, Equipos y Herramientas", nombre:"¿Está el aire acondicionado del área funcionando?"},    {id:37, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Está el extintor del área cargado y señalizado?"},    {id:38, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Está la ruta de evacuación del área señalizada?"},    {id:39, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Está el pulsador de alarma del área correctamente?"},    {id:40, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Está la luz de emergencia del área funcionando?"},    {id:41, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Utilizan los brigadistas y comité su identificación?"},    {id:42, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Está la inspección del botiquín del área actualizada?"},    {id:43, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Está el departamento libre de accidentes laborales?"},    {id:44, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Se notifican los accidentes usando el formulario?"},    {id:45, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Se notifican los incidentes usando el formulario?"},    {id:46, seccion:"V. Emergencias, Accidentes, Incidentes, Averías y Acciones Correctivas", nombre:"¿Se notifican las averías y se toman las correcciones?"}
+];
+const TIPO_GRAL_NTD = { id:"gral_ntd", nombre:"Inspección General por Departamentos", documento:"NTD-SGS-FRM-11", puntosPorItem:Number((100/46).toFixed(3)), empresas:["Notions Dominicana"], checklist: CHECKLIST_GRAL_NTD, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No" };
+
+/* ---- Áreas o Partes Críticas de las Máquinas (GTG-SGS-FRM-33) — planta de Global Technology Group ---- */
+const CHECKLIST_MAQUINAS_GTG = [
+    {id:1, nombre:"Extrusión — Chyi Yang A, B, C, D (Resistencias)"},
+    {id:2, nombre:"Extrusión — Lung Meng 1, 2 (Resistencias/Estática)"},
+    {id:3, nombre:"Extrusión — High Plass (Resistencias/Estática)"},
+    {id:4, nombre:"Extrusión — Rulli (Resistencias/Estática)"},
+    {id:5, nombre:"Conversión — Chyi Yang T-Shirt (Sellos Calientes/Engranaje)"},
+    {id:6, nombre:"Conversión — ROAN (Sellos Calientes/Corte/Guarda)"},
+    {id:7, nombre:"Conversión — Liberty (Sellos Calientes/Corte/Guarda)"},
+    {id:8, nombre:"Conversión — Wicketter (Sellos Calientes/Extractor/Brazo Rotador)"},
+    {id:9, nombre:"Conversión — Sing Siang 2 (Sellos Calientes/Cuchillas/Resistencia/Estática)"},
+    {id:10, nombre:"Conversión — Chyi Yang Sello de Fondo (Sellos Calientes/Cuchillas/Resistencia/Estática)"},
+    {id:11, nombre:"Conversión — Sing Siang 1 (Resistencias/Sellos Calientes/Cuchillas/Estática)"},
+    {id:12, nombre:"Conversión — Lung Meng 1 (Sellos Calientes)"},
+    {id:13, nombre:"Conversión — Equiplastic (Cuchillas de Corte/Resistencias)"},
+    {id:14, nombre:"Conversión — High Plass (Resistencias/Estática)"},
+    {id:15, nombre:"Impresión — Flexo (Rolos)"},
+    {id:16, nombre:"Impresión — Recuperadora (Válvula de Seguridad/Sistema de Cierre)"},
+    {id:17, nombre:"Reciclaje — Molino (Molino)"},
+    {id:18, nombre:"Planta Eléctrica — Planta (Guardas de Seguridad/Liqueos)"},
+    {id:19, nombre:"Planta Eléctrica — Compresores (Válvulas de Seguridad/Liqueos)"}
+];
+const TIPO_MAQUINAS_GTG = { id:"maquinas_gtg", nombre:"Inspección de Áreas o Partes Críticas de las Máquinas", documento:"GTG-SGS-FRM-33", puntosPorItem:Number((100/19).toFixed(3)), empresas:["Global Technology Group"], checklist: CHECKLIST_MAQUINAS_GTG, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Ok", etiquetaValoracionNegativa:"Hallazgo" };
+
+/* ---- Formularios corporativos (documento con prefijo CRP): por ahora asumo que aplican
+   a las 3 empresas, ya que el formulario original no fija una empresa específica —
+   avísame si alguno debe limitarse a una sola. ---- */
+const CHECKLIST_ELECTRICOS = [
+    {id:1, nombre:"¿Se encuentran los paneles, cajas eléctricas, tomacorrientes, etc., funcionando?"},
+    {id:2, nombre:"¿Se encuentran los paneles eléctricos debidamente cerrados?"},
+    {id:3, nombre:"¿Se encuentran los paneles eléctricos desobstruidos?"},
+    {id:4, nombre:"¿Se encuentran los cableados en buen estado y sin empastaduras?"},
+    {id:5, nombre:"¿Indica cada break en los paneles eléctricos el área que controla?"},
+    {id:6, nombre:"¿Contienen las instalaciones o paneles eléctricos la señalización de riesgo?"},
+    {id:7, nombre:"¿Se observan las regletas, tomacorrientes, etc., sin sobrecargas?"},
+    {id:8, nombre:"¿Se encuentran los tomacorrientes y cajas de electricidad debidamente tapados?"},
+    {id:9, nombre:"¿Poseen las máquinas y estructuras metálicas su conexión puesta a tierra?"},
+    {id:10, nombre:"¿Se encuentran las instalaciones eléctricas debidamente ubicadas?"}
+];
+const TIPO_ELECTRICOS = { id:"electricos_crp", nombre:"Inspección de Paneles e Instalaciones Eléctricas", documento:"CRP-SGS-FRM-20", puntosPorItem:10, empresas:["Now Logistics","Notions Dominicana","Global Technology Group"], checklist: CHECKLIST_ELECTRICOS, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No" };
+
+const CHECKLIST_ESTACIONAMIENTOS = [
+    {id:1, nombre:"¿Están los vehículos estacionados de reversa?"},
+    {id:2, nombre:"¿Los vehículos están utilizando un solo estacionamiento?"},
+    {id:3, nombre:"¿Los vehículos están estacionados fuera de las áreas verdes?"},
+    {id:4, nombre:"¿Están las salidas de emergencia libres de vehículos estacionados en frente?"},
+    {id:5, nombre:"¿Las puertas de acceso a la empresa están libres de vehículos estacionados en frente?"},
+    {id:6, nombre:"¿Se encuentran los conos y señalizaciones para reservar estacionamientos en su lugar?"},
+    {id:7, nombre:"¿Se encuentran las rampas de carga libres de vehículos estacionados en frente?"},
+    {id:8, nombre:"¿Se encuentran las rampas de montacargas libres de vehículos estacionados en frente?"}
+];
+const TIPO_ESTACIONAMIENTOS = { id:"estacionamientos_crp", nombre:"Inspección de Estacionamientos", documento:"CRP-SGS-FRM-01", puntosPorItem:12.5, empresas:["Now Logistics","Notions Dominicana","Global Technology Group"], checklist: CHECKLIST_ESTACIONAMIENTOS, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No" };
+
+const CHECKLIST_QUIMICOS = [
+    {id:1, nombre:"¿Están los recipientes identificados?"},
+    {id:2, nombre:"¿Contienen los recipientes la información de riesgo, ficha NFPA o HMIS?"},
+    {id:3, nombre:"¿Están los recipientes debidamente sellados?"},
+    {id:4, nombre:"¿Está la condición de los recipientes en buen estado?"},
+    {id:5, nombre:"¿Están los recipientes almacenados correctamente?"},
+    {id:6, nombre:"¿Poseen los desperdicios la Ficha del Sistema de Control de Residuos Peligrosos?"},
+    {id:7, nombre:"¿Está al día el tiempo establecido de almacenamiento del desperdicio?"},
+    {id:8, nombre:"¿Posee el área las señalizaciones de precaución?"},
+    {id:9, nombre:"¿Posee el área las señalizaciones de uso de EPP?"},
+    {id:10, nombre:"¿Se encuentra el área libre de derrames?"},
+    {id:11, nombre:"¿Se cuenta con equipos antiderrames?"},
+    {id:12, nombre:"¿Se está cumpliendo con el NO uso de envases de alimentos para almacenar productos químicos?"}
+];
+const TIPO_QUIMICOS = { id:"quimicos_crp", nombre:"Inspección de Productos Químicos y Desechos Controlados", documento:"CRP-SGS-FRM-19", puntosPorItem:Number((100/12).toFixed(3)), empresas:["Now Logistics","Notions Dominicana","Global Technology Group"], checklist: CHECKLIST_QUIMICOS, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No" };
+
+/* ==================== TIPOS EN MODO "MUESTREO" ====================
+   Estas 3 no tienen una lista fija de elementos: en cada inspección se van agregando
+   filas (una por área/PC/departamento revisado). El % de cumplimiento se calcula
+   sumando los "positivos" contra el total revisado, en vez de contar checks fijos. */
+
+const TIPO_IDENTIFICACION = {
+    id:"identificacion_now", nombre:"Inspección Aleatoria del Uso de Identificación en las Áreas", documento:"NOW-SGS-FRM-41",
+    empresas:["Now Logistics"], integrado:true, modo:"muestreo",
+    columnasDescriptivas: [ {key:"area", label:"Área inspeccionada"} ],
+    columnasEvaluacion: [ {key:"identificacion", label:"Personas con identificación visible", tipo:"conteo", labelTotal:"Cantidad de personas en el área", labelCumple:"Cantidad con identificación visible"} ],
+    columnaObservacion: {key:"acciones", label:"Acciones ejecutadas al encontrar personas sin identificación"}
+};
+
+const TIPO_CIBERSEGURIDAD = {
+    id:"ciberseguridad_crp", nombre:"Inspección Aleatoria de Vulnerabilidad de Ciberseguridad", documento:"CRP-SIG-FRM-7",
+    empresas:["Now Logistics","Notions Dominicana","Global Technology Group"], integrado:true, modo:"muestreo",
+    columnasDescriptivas: [ {key:"ocupante", label:"Ocupante de la PC revisada"} ],
+    columnasEvaluacion: [
+        {key:"clave_no_visible", label:"Clave de acceso no está escrita en lugares visibles", tipo:"si_no"},
+        {key:"uso_laboral", label:"No se usaba la PC para actividades no laborales", tipo:"si_no"},
+        {key:"dispositivos_restringidos", label:"Acceso a dispositivos externos restringido", tipo:"si_no"},
+        {key:"descargas_restringidas", label:"Descarga de archivos no confiables restringida", tipo:"si_no"}
+    ],
+    columnaObservacion: {key:"acciones", label:"Acciones ejecutadas en caso de evidenciar algún hallazgo"}
+};
+
+const TIPO_COMPUTADORAS = {
+    id:"computadoras_desatendidas_crp", nombre:"Inspección de Computadoras Desatendidas", documento:"CRP-SIG-FRM-7",
+    empresas:["Now Logistics","Notions Dominicana","Global Technology Group"], integrado:true, modo:"muestreo",
+    columnasDescriptivas: [ {key:"departamento", label:"Departamento"}, {key:"responsable", label:"Responsable del equipo"} ],
+    columnasEvaluacion: [ {key:"estado", label:"Estado del equipo", tipo:"si_no", etiquetaSi:"OK", etiquetaNo:"Desatendido"} ],
+    columnaObservacion: {key:"acciones", label:"Acciones ejecutadas en caso de evidenciarse algún hallazgo"}
+};
+
+/* ==================== USUARIOS Y SESIÓN ====================
+   ⚠️ Esto es un candado de acceso para el prototipo, NO seguridad real: al ser
+   HTML/JS plano, cualquiera que abra "Ver código fuente" puede leer las
+   contraseñas de aquí abajo. Cuando esto se conecte a Supabase, el login se
+   mueve al backend con contraseñas encriptadas de verdad.
+   Para cambiar una contraseña, edita el campo "password" de cada usuario. */
+const USUARIOS = [
+    { usuario:"joan",        nombre:"Joan Garcia",              password:"Joan2026*",   rol:"usuario" },
+    { usuario:"jhoan",       nombre:"Jhoan Hilario",             password:"Jhoan2026*",  rol:"usuario" },
+    { usuario:"victor",      nombre:"Victor Torres",             password:"Victor2026*", rol:"superadmin" },
+    { usuario:"colaborador", nombre:"Colaborador / Pasante",     password:"Colab2026*",  rol:"usuario", generico:true }
+];
+
+let sesionActual = null; // { usuario, nombre, rol, generico }
+
+function onCambiarLoginUsuario() {
+    let u = USUARIOS.find(x => x.usuario === document.getElementById("loginUsuario").value);
+    document.getElementById("loginNombreGenericoWrap").style.display = (u && u.generico) ? "block" : "none";
+}
+
+function mostrarErrorLogin(msg) {
+    let box = document.getElementById("loginError");
+    box.innerText = msg;
+    box.style.display = "block";
+}
+
+function intentarLogin() {
+    let uId = document.getElementById("loginUsuario").value;
+    let pass = document.getElementById("loginPassword").value;
+    let u = USUARIOS.find(x => x.usuario === uId);
+    document.getElementById("loginError").style.display = "none";
+
+    if (!u) { mostrarErrorLogin("Selecciona tu usuario."); return; }
+    if (u.password !== pass) { mostrarErrorLogin("Contraseña incorrecta."); return; }
+
+    let nombreFinal = u.nombre;
+    if (u.generico) {
+        let nombreTecleado = document.getElementById("loginNombreGenerico").value.trim();
+        if (!nombreTecleado) { mostrarErrorLogin("Escribe tu nombre para continuar."); return; }
+        nombreFinal = nombreTecleado;
+    }
+
+    sesionActual = { usuario: u.usuario, nombre: nombreFinal, rol: u.rol };
+    localStorage.setItem("insp_sesion", JSON.stringify(sesionActual));
+    entrarAlApp();
+}
+
+function cerrarSesion() {
+    sesionActual = null;
+    localStorage.removeItem("insp_sesion");
+    document.getElementById("appContenido").style.display = "none";
+    document.getElementById("pantallaLogin").style.display = "flex";
+    document.getElementById("loginPassword").value = "";
+    document.getElementById("loginUsuario").value = "";
+    document.getElementById("loginNombreGenericoWrap").style.display = "none";
+    document.getElementById("loginError").style.display = "none";
+}
+
+function entrarAlApp() {
+    document.getElementById("pantallaLogin").style.display = "none";
+    document.getElementById("appContenido").style.display = "block";
+    document.getElementById("topbarSesion").innerHTML = `
+        <span class="chip ${sesionActual.rol === "superadmin" ? "chip-admin" : ""}">👤 ${sesionActual.nombre}${sesionActual.rol === "superadmin" ? " · Super Admin" : ""}</span>
+        <button class="btn-chico" onclick="cerrarSesion()">Cerrar sesión</button>
+    `;
+    document.getElementById("tabBtnTipos").style.display = sesionActual.rol === "superadmin" ? "inline-block" : "none";
+    mostrarTab("inicio");
+}
+
+function intentarSesionGuardada() {
+    let selUsuario = document.getElementById("loginUsuario");
+    selUsuario.innerHTML = `<option value="">Selecciona tu usuario...</option>` + USUARIOS.map(u => `<option value="${u.usuario}">${u.nombre}</option>`).join("");
+
+    let guardada = JSON.parse(localStorage.getItem("insp_sesion") || "null");
+    if (guardada && USUARIOS.find(u => u.usuario === guardada.usuario)) {
+        sesionActual = guardada;
+        entrarAlApp();
+    }
+}
+
+function esSuperAdmin() { return !!(sesionActual && sesionActual.rol === "superadmin"); }
+function exigirSuperAdmin(mensaje) {
+    if (esSuperAdmin()) return true;
+    alert(mensaje || "Solo el Super Admin puede hacer esto.");
+    return false;
+}
+
+/* ==================== ESTADO ==================== */
+let inspecciones = JSON.parse(localStorage.getItem("insp_registros") || "[]");
+let tiposCustom = JSON.parse(localStorage.getItem("insp_tipos_custom") || "[]");
+let overridesTipos = JSON.parse(localStorage.getItem("insp_tipos_overrides") || "{}"); // ediciones del Super Admin a los tipos integrados (preguntas, puntuación, etc.)
+let bitacora = JSON.parse(localStorage.getItem("insp_bitacora") || "[]");
+let inspeccionActual = null;
+let inspeccionEditandoId = null; // si no es null, "Guardar" actualiza esa inspección en vez de crear una nueva
+let chartTendencia = null, chartPorNave = null, chartPorEmpresa = null, chartRecurrentes = null, chartPorAnio = null, chartMensualPorAnio = null;
+
+const TIPOS_INTEGRADOS_BASE = [TIPO_SEG_FISICA, TIPO_GRAL_NOW, TIPO_GRAL_GTG, TIPO_GRAL_NTD, TIPO_MAQUINAS_GTG, TIPO_ELECTRICOS, TIPO_ESTACIONAMIENTOS, TIPO_QUIMICOS, TIPO_IDENTIFICACION, TIPO_CIBERSEGURIDAD, TIPO_COMPUTADORAS];
+
+function todosLosTipos() {
+    let integradosConOverride = TIPOS_INTEGRADOS_BASE.map(t => overridesTipos[t.id] ? Object.assign({}, t, overridesTipos[t.id], { integrado:true, id:t.id }) : t);
+    return [...integradosConOverride, ...tiposCustom];
+}
+function tipoPorId(id) { return todosLosTipos().find(t => t.id === id); }
+
+function guardarEnStorage() {
+    localStorage.setItem("insp_registros", JSON.stringify(inspecciones));
+}
+function guardarTiposEnStorage() {
+    localStorage.setItem("insp_tipos_custom", JSON.stringify(tiposCustom));
+}
+function guardarOverridesEnStorage() {
+    localStorage.setItem("insp_tipos_overrides", JSON.stringify(overridesTipos));
+}
+
+/* ---- Identidad de quien usa la app ahora mismo (para poder trazar quién hizo qué) ---- */
+function obtenerUsuarioActual() {
+    return sesionActual ? sesionActual.nombre : "Sin identificar";
+}
+
+/* ---- Bitácora: se registra cada creación, edición o eliminación, con quién y cuándo ---- */
+function registrarBitacora(accion, detalle) {
+    bitacora.push({ fecha: new Date().toISOString(), usuario: obtenerUsuarioActual(), accion, detalle });
+    localStorage.setItem("insp_bitacora", JSON.stringify(bitacora));
+}
+function renderBitacora() {
+    let tbody = document.getElementById("tbodyBitacora");
+    if (bitacora.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:24px;">Todavía no hay movimientos registrados.</td></tr>`;
+        return;
+    }
+    let ordenada = bitacora.slice().sort((a,b) => b.fecha.localeCompare(a.fecha));
+    tbody.innerHTML = ordenada.map(e => `
+        <tr>
+            <td>${new Date(e.fecha).toLocaleString("es")}</td>
+            <td>${e.usuario}</td>
+            <td>${e.accion}</td>
+            <td>${e.detalle}</td>
+        </tr>
+    `).join("");
+}
+
+/* ==================== NAVEGACIÓN DE TABS ==================== */
+function mostrarTab(id) {
+    if (id === "tipos" && !esSuperAdmin()) { alert("Solo el Super Admin puede entrar a Tipos de Inspección."); id = "inicio"; }
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.getElementById("panel" + id.charAt(0).toUpperCase() + id.slice(1)).classList.add("active");
+    let btn = document.getElementById("tabBtn" + id.charAt(0).toUpperCase() + id.slice(1));
+    if (btn) btn.classList.add("active");
+    if (id === "inicio") renderInicio();
+    if (id === "historial") renderHistorial();
+    if (id === "dashboard") renderDashboard();
+    if (id === "comparativa") renderComparativa();
+    if (id === "tipos") renderCatalogoTipos();
+    if (id === "bitacora") renderBitacora();
+}
+
+/* ==================== EMPEZAR: elegir empresa + tipo ==================== */
+function renderInicio() {
+    let selEmpresa = document.getElementById("fInicioEmpresa");
+    if (selEmpresa.options.length <= 1) {
+        selEmpresa.innerHTML = `<option value="">Selecciona una empresa...</option>` + EMPRESAS.map(e => `<option value="${e}">${e}</option>`).join("");
+    }
+    poblarSelectorTipoPorEmpresa();
+
+    let resumen = document.getElementById("resumenTiposPorEmpresa");
+    resumen.innerHTML = EMPRESAS.map(emp => {
+        let tipos = todosLosTipos().filter(t => t.empresas.includes(emp));
+        return `<div class="card"><h3 style="margin-top:0; font-size:14px;">${emp}</h3>
+            ${tipos.length === 0
+                ? `<p style="font-size:13px; color:var(--text-muted);">Todavía no hay inspecciones cargadas para esta empresa. Agrégalas en "⚙️ Tipos de Inspección".</p>`
+                : `<ul style="font-size:13px; line-height:1.8; margin:0; padding-left:18px;">${tipos.map(t => `<li>${t.nombre} <span style="color:var(--text-muted);">(${t.modo === "muestreo" ? "muestreo por filas" : t.checklist.length + " elementos"})</span></li>`).join("")}</ul>`}
+        </div>`;
+    }).join("");
+}
+
+function poblarSelectorTipoPorEmpresa() {
+    let empresa = document.getElementById("fInicioEmpresa").value;
+    let selTipo = document.getElementById("fInicioTipo");
+    if (!empresa) { selTipo.innerHTML = `<option value="">Primero elige una empresa</option>`; return; }
+    let tipos = todosLosTipos().filter(t => t.empresas.includes(empresa));
+    if (tipos.length === 0) { selTipo.innerHTML = `<option value="">Sin inspecciones cargadas para esta empresa</option>`; return; }
+    selTipo.innerHTML = `<option value="">Selecciona la inspección...</option>` + tipos.map(t => `<option value="${t.id}">${t.nombre}${t.documento ? " (" + t.documento + ")" : ""}</option>`).join("");
+}
+
+function empezarInspeccionDesdeInicio() {
+    let empresa = document.getElementById("fInicioEmpresa").value;
+    let tipoId = document.getElementById("fInicioTipo").value;
+    if (!empresa) { alert("Elige una empresa."); return; }
+    if (!tipoId) { alert("Elige qué inspección vas a hacer."); return; }
+    iniciarNuevaInspeccion(empresa, tipoId);
+    mostrarTab("nueva");
+}
+
+/* ==================== TIPOS DE INSPECCIÓN (catálogo) ==================== */
+let tipoCustomEditandoId = null;
+let tipoEditandoEsIntegrado = false;
+let columnasEvaluacionTemp = [];
+
+const PRESETS_ETIQUETAS = {
+    si_no: { pos:"Sí", neg:"No" },
+    ok_corregir: { pos:"Ok", neg:"Corregir" },
+    ok_hallazgo: { pos:"Ok", neg:"Hallazgo" }
+};
+
+function slugificar(texto) {
+    return (texto || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || ("col_" + Date.now());
+}
+
+// Convierte el textarea de elementos (con posibles líneas "## Sección" y "Elemento | pista")
+// en un checklist estructurado. Se usa tanto al guardar como, a la inversa, al editar.
+function parseElementosChecklist(texto) {
+    let seccionActual = null, contador = 0, resultado = [];
+    texto.split("\n").map(l => l.trim()).filter(Boolean).forEach(linea => {
+        if (linea.startsWith("##")) { seccionActual = linea.replace(/^##\s*/, "").trim(); return; }
+        contador++;
+        let partes = linea.split("|");
+        let item = { id: contador, nombre: partes[0].trim() };
+        if (seccionActual) item.seccion = seccionActual;
+        if (partes.length > 1 && partes.slice(1).join("|").trim()) item.pistaEspecifique = partes.slice(1).join("|").trim();
+        resultado.push(item);
+    });
+    return resultado;
+}
+function serializarElementosChecklist(checklist) {
+    let seccionActual = null, lineas = [];
+    checklist.forEach(it => {
+        if (it.seccion && it.seccion !== seccionActual) { seccionActual = it.seccion; lineas.push("## " + seccionActual); }
+        lineas.push(it.nombre + (it.pistaEspecifique ? " | " + it.pistaEspecifique : ""));
+    });
+    return lineas.join("\n");
+}
+
+function cambiarModoConstructorTipo() {
+    let radio = document.querySelector('input[name="fTipoModo"]:checked');
+    let modo = radio ? radio.value : "checklist";
+    document.getElementById("constructorChecklistTipo").style.display = modo === "checklist" ? "block" : "none";
+    document.getElementById("constructorMuestreoTipo").style.display = modo === "muestreo" ? "block" : "none";
+}
+function cambiarPresetEtiquetas() {
+    let val = document.getElementById("fTipoPresetEtiquetas").value;
+    document.getElementById("filaEtiquetasPersonalizadas").style.display = val === "personalizado" ? "grid" : "none";
+}
+function toggleCondicionTipo() {
+    document.getElementById("filaCondicionPersonalizada").style.display = document.getElementById("fTipoTieneCondicion").checked ? "grid" : "none";
+}
+function toggleCamposColEval() {
+    let tipo = document.getElementById("fNuevaColEvalTipo").value;
+    document.getElementById("camposColEvalSiNo").style.display = tipo === "si_no" ? "grid" : "none";
+    document.getElementById("camposColEvalConteo").style.display = tipo === "conteo" ? "grid" : "none";
+    document.getElementById("campoColEvalEtiqueta").style.display = tipo === "conteo" ? "none" : "block";
+}
+
+function agregarColumnaEvaluacionTipo() {
+    let tipoCol = document.getElementById("fNuevaColEvalTipo").value;
+    if (tipoCol === "conteo") {
+        let labelTotal = document.getElementById("fNuevaColEvalTotal").value.trim();
+        let labelCumple = document.getElementById("fNuevaColEvalCumple").value.trim();
+        if (!labelTotal || !labelCumple) { alert("Completa las dos etiquetas de la columna de conteo."); return; }
+        columnasEvaluacionTemp.push({ key: slugificar(labelTotal) + "_" + columnasEvaluacionTemp.length, label: labelTotal, tipo:"conteo", labelTotal, labelCumple });
+        document.getElementById("fNuevaColEvalTotal").value = "";
+        document.getElementById("fNuevaColEvalCumple").value = "";
+    } else {
+        let label = document.getElementById("fNuevaColEvalLabel").value.trim();
+        let pos = document.getElementById("fNuevaColEvalPos").value.trim() || "Sí";
+        let neg = document.getElementById("fNuevaColEvalNeg").value.trim() || "No";
+        if (!label) { alert("Ponle una etiqueta a la pregunta."); return; }
+        columnasEvaluacionTemp.push({ key: slugificar(label) + "_" + columnasEvaluacionTemp.length, label, tipo:"si_no", etiquetaSi:pos, etiquetaNo:neg });
+        document.getElementById("fNuevaColEvalLabel").value = "";
+        document.getElementById("fNuevaColEvalPos").value = "Sí";
+        document.getElementById("fNuevaColEvalNeg").value = "No";
+    }
+    renderListaColumnasEvaluacionTemp();
+}
+function eliminarColumnaEvaluacionTemp(idx) {
+    columnasEvaluacionTemp.splice(idx, 1);
+    renderListaColumnasEvaluacionTemp();
+}
+function renderListaColumnasEvaluacionTemp() {
+    let cont = document.getElementById("listaColumnasEvaluacionTipo");
+    if (!cont) return;
+    if (columnasEvaluacionTemp.length === 0) {
+        cont.innerHTML = `<p style="font-size:12.5px; color:var(--text-muted); margin:0;">Todavía no has agregado columnas de evaluación.</p>`;
+        return;
+    }
+    cont.innerHTML = columnasEvaluacionTemp.map((c, idx) => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-light); border-radius:8px; padding:8px 12px; margin-bottom:6px; font-size:12.5px;">
+            <span>${c.tipo === "conteo" ? `<strong>Conteo:</strong> ${c.labelTotal} / ${c.labelCumple}` : `<strong>Sí-No:</strong> ${c.label} (${c.etiquetaSi} / ${c.etiquetaNo})`}</span>
+            <button class="btn-chico rojo" onclick="eliminarColumnaEvaluacionTemp(${idx})">✕</button>
+        </div>
+    `).join("");
+}
+
+function renderCatalogoTipos() {
+    if (!exigirSuperAdmin("Solo el Super Admin puede ver y editar el catálogo de inspecciones.")) { mostrarTab("inicio"); return; }
+
+    let cont = document.getElementById("checkboxesEmpresaTipo");
+    cont.innerHTML = EMPRESAS.map(e => `<label style="font-size:13px;"><input type="checkbox" class="chk-empresa-tipo" value="${e}"> ${e}</label>`).join("");
+
+    let lista = document.getElementById("listaTiposCatalogo");
+    lista.innerHTML = todosLosTipos().map(t => {
+        let detalle = t.modo === "muestreo"
+            ? `${t.columnasEvaluacion.length} columna(s) de evaluación — filas dinámicas`
+            : `${t.checklist.length} elementos · ${t.puntosPorItem} pts c/u · ${t.etiquetaValoracionPositiva || "Ok"}/${t.etiquetaValoracionNegativa || "Corregir"}${t.tieneCondicion ? ` · con Condición (${t.etiquetaCondicionPositiva}/${t.etiquetaCondicionNegativa})` : ""}`;
+        let tieneOverride = t.integrado && !!overridesTipos[t.id];
+        return `
+        <div class="item-row" style="grid-template-columns:1fr auto;">
+            <div>
+                <div class="item-nombre">${t.nombre}${t.documento ? ` <span style="color:var(--text-muted); font-weight:400;">(${t.documento})</span>` : ""}${t.modo === "muestreo" ? ` <span style="color:var(--accent-blue); font-weight:700; font-size:11px;">· MUESTREO</span>` : ""}</div>
+                <div style="font-size:12.5px; color:var(--text-muted);">${t.empresas.join(", ")} · ${detalle}</div>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+                ${t.integrado ? `<span class="badge-nivel ${tieneOverride ? "badge-medio" : "badge-adecuado"}">${tieneOverride ? "Personalizada" : "Incluida"}</span>` : ""}
+                <button class="btn-chico" onclick="editarTipo('${t.id}')">Editar</button>
+                ${t.integrado
+                    ? (tieneOverride ? `<button class="btn-chico rojo" onclick="restablecerTipoIntegrado('${t.id}')">Restablecer original</button>` : "")
+                    : `<button class="btn-chico rojo" onclick="eliminarTipoCustom('${t.id}')">Eliminar</button>`}
+            </div>
+        </div>
+    `;
+    }).join("");
+
+    cambiarModoConstructorTipo();
+    cambiarPresetEtiquetas();
+    toggleCondicionTipo();
+    toggleCamposColEval();
+    renderListaColumnasEvaluacionTemp();
+}
+
+function agregarTipoInspeccion() {
+    if (!exigirSuperAdmin("Solo el Super Admin puede crear o editar tipos de inspección.")) return;
+
+    let nombre = document.getElementById("fTipoNombre").value.trim();
+    let documento = document.getElementById("fTipoDocumento").value.trim();
+    let empresasElegidas = Array.from(document.querySelectorAll(".chk-empresa-tipo:checked")).map(c => c.value);
+    let modoRadio = document.querySelector('input[name="fTipoModo"]:checked');
+    let modo = modoRadio ? modoRadio.value : "checklist";
+
+    if (!nombre) { alert("Ponle un nombre a la inspección."); return; }
+    if (empresasElegidas.length === 0) { alert("Elige al menos una empresa a la que aplica."); return; }
+
+    let tipoBase = { nombre, documento, empresas: empresasElegidas };
+    let detalleTipo = "";
+
+    if (modo === "checklist") {
+        let checklist = parseElementosChecklist(document.getElementById("fTipoElementos").value);
+        if (checklist.length === 0) { alert("Agrega al menos un elemento a inspeccionar."); return; }
+        let puntosTotales = parseFloat(document.getElementById("fTipoPuntosTotales").value) || 100;
+        let preset = document.getElementById("fTipoPresetEtiquetas").value;
+        let etiquetaPos, etiquetaNeg;
+        if (preset === "personalizado") {
+            etiquetaPos = document.getElementById("fTipoEtiquetaPos").value.trim() || "Cumple";
+            etiquetaNeg = document.getElementById("fTipoEtiquetaNeg").value.trim() || "No cumple";
+        } else {
+            etiquetaPos = PRESETS_ETIQUETAS[preset].pos;
+            etiquetaNeg = PRESETS_ETIQUETAS[preset].neg;
+        }
+        tipoBase.checklist = checklist;
+        tipoBase.puntosPorItem = Number((puntosTotales / checklist.length).toFixed(3));
+        tipoBase.etiquetaValoracionPositiva = etiquetaPos;
+        tipoBase.etiquetaValoracionNegativa = etiquetaNeg;
+        tipoBase.tieneCondicion = document.getElementById("fTipoTieneCondicion").checked;
+        if (tipoBase.tieneCondicion) {
+            tipoBase.etiquetaCondicionPositiva = document.getElementById("fTipoCondPos").value.trim() || "Adecuado";
+            tipoBase.etiquetaCondicionNegativa = document.getElementById("fTipoCondNeg").value.trim() || "Mejorar";
+        }
+        detalleTipo = `${checklist.length} elementos, marca ${etiquetaPos}/${etiquetaNeg}, ${tipoBase.puntosPorItem} pts c/u`;
+    } else {
+        let columnasDescriptivas = document.getElementById("fTipoColumnasDescriptivas").value.split("\n").map(l => l.trim()).filter(Boolean).map(label => ({ key: slugificar(label), label }));
+        if (columnasDescriptivas.length === 0) { alert("Agrega al menos una columna descriptiva (ej. Área inspeccionada)."); return; }
+        if (columnasEvaluacionTemp.length === 0) { alert("Agrega al menos una columna de evaluación."); return; }
+        tipoBase.modo = "muestreo";
+        tipoBase.columnasDescriptivas = columnasDescriptivas;
+        tipoBase.columnasEvaluacion = columnasEvaluacionTemp.slice();
+        tipoBase.columnaObservacion = { key: "observaciones", label: document.getElementById("fTipoColumnaObservacion").value.trim() || "Observaciones" };
+        detalleTipo = `${columnasEvaluacionTemp.length} columna(s) de evaluación (muestreo)`;
+    }
+
+    if (tipoEditandoEsIntegrado && tipoCustomEditandoId) {
+        // Se está editando un formulario integrado (preguntas y/o puntuación) → se guarda como override, no se toca el original.
+        delete tipoBase.empresas; // mantenemos las empresas tal cual las eligió en el formulario (sí se puede cambiar)
+        tipoBase.empresas = empresasElegidas;
+        overridesTipos[tipoCustomEditandoId] = tipoBase;
+        guardarOverridesEnStorage();
+        registrarBitacora("Edición de tipo integrado", `"${nombre}" personalizado por Super Admin (${detalleTipo}, aplica a ${empresasElegidas.join(", ")})`);
+        tipoCustomEditandoId = null;
+        tipoEditandoEsIntegrado = false;
+        document.getElementById("btnGuardarTipo").innerText = "➕ Agregar al catálogo";
+        alert(`"${nombre}" fue actualizado.`);
+    } else if (tipoCustomEditandoId) {
+        let idx = tiposCustom.findIndex(t => t.id === tipoCustomEditandoId);
+        if (idx === -1) { alert("Este tipo ya no existe."); tipoCustomEditandoId = null; return; }
+        tipoBase.id = tipoCustomEditandoId;
+        tiposCustom[idx] = tipoBase;
+        guardarTiposEnStorage();
+        registrarBitacora("Edición de tipo", `"${nombre}" actualizado en el catálogo (${detalleTipo}, aplica a ${empresasElegidas.join(", ")})`);
+        tipoCustomEditandoId = null;
+        document.getElementById("btnGuardarTipo").innerText = "➕ Agregar al catálogo";
+        alert(`"${nombre}" fue actualizado.`);
+    } else {
+        tipoBase.id = "tipo_" + Date.now();
+        tiposCustom.push(tipoBase);
+        guardarTiposEnStorage();
+        registrarBitacora("Alta de tipo", `"${nombre}" agregado al catálogo (${detalleTipo}, aplica a ${empresasElegidas.join(", ")})`);
+        alert(`"${nombre}" agregada al catálogo.`);
+    }
+
+    limpiarFormularioTipo();
+    renderCatalogoTipos();
+}
+
+function limpiarFormularioTipo() {
+    document.getElementById("fTipoNombre").value = "";
+    document.getElementById("fTipoDocumento").value = "";
+    document.querySelectorAll(".chk-empresa-tipo").forEach(c => c.checked = false);
+    let radioChecklist = document.querySelector('input[name="fTipoModo"][value="checklist"]');
+    if (radioChecklist) radioChecklist.checked = true;
+    document.getElementById("fTipoPresetEtiquetas").value = "si_no";
+    document.getElementById("fTipoEtiquetaPos").value = "";
+    document.getElementById("fTipoEtiquetaNeg").value = "";
+    document.getElementById("fTipoPuntosTotales").value = "100";
+    document.getElementById("fTipoTieneCondicion").checked = false;
+    document.getElementById("fTipoCondPos").value = "Adecuado";
+    document.getElementById("fTipoCondNeg").value = "Mejorar";
+    document.getElementById("fTipoElementos").value = "";
+    document.getElementById("fTipoColumnasDescriptivas").value = "";
+    document.getElementById("fTipoColumnaObservacion").value = "";
+    columnasEvaluacionTemp = [];
+    cambiarModoConstructorTipo();
+    cambiarPresetEtiquetas();
+    toggleCondicionTipo();
+    renderListaColumnasEvaluacionTemp();
+}
+
+function editarTipo(id) {
+    if (!exigirSuperAdmin("Solo el Super Admin puede editar tipos de inspección.")) return;
+    let tipo = tipoPorId(id);
+    if (!tipo) return;
+    tipoCustomEditandoId = id;
+    tipoEditandoEsIntegrado = !!tipo.integrado;
+    limpiarFormularioTipo();
+
+    document.getElementById("fTipoNombre").value = tipo.nombre;
+    document.getElementById("fTipoDocumento").value = tipo.documento || "";
+    document.querySelectorAll(".chk-empresa-tipo").forEach(c => { c.checked = tipo.empresas.includes(c.value); });
+
+    if (tipo.modo === "muestreo") {
+        document.querySelector('input[name="fTipoModo"][value="muestreo"]').checked = true;
+        document.getElementById("fTipoColumnasDescriptivas").value = tipo.columnasDescriptivas.map(c => c.label).join("\n");
+        document.getElementById("fTipoColumnaObservacion").value = tipo.columnaObservacion.label;
+        columnasEvaluacionTemp = JSON.parse(JSON.stringify(tipo.columnasEvaluacion));
+    } else {
+        document.querySelector('input[name="fTipoModo"][value="checklist"]').checked = true;
+        document.getElementById("fTipoPuntosTotales").value = Math.round(tipo.puntosPorItem * tipo.checklist.length);
+        document.getElementById("fTipoElementos").value = serializarElementosChecklist(tipo.checklist);
+        let presetDetectado = Object.keys(PRESETS_ETIQUETAS).find(k => PRESETS_ETIQUETAS[k].pos === tipo.etiquetaValoracionPositiva && PRESETS_ETIQUETAS[k].neg === tipo.etiquetaValoracionNegativa);
+        document.getElementById("fTipoPresetEtiquetas").value = presetDetectado || "personalizado";
+        if (!presetDetectado) {
+            document.getElementById("fTipoEtiquetaPos").value = tipo.etiquetaValoracionPositiva || "";
+            document.getElementById("fTipoEtiquetaNeg").value = tipo.etiquetaValoracionNegativa || "";
+        }
+        document.getElementById("fTipoTieneCondicion").checked = !!tipo.tieneCondicion;
+        if (tipo.tieneCondicion) {
+            document.getElementById("fTipoCondPos").value = tipo.etiquetaCondicionPositiva || "Adecuado";
+            document.getElementById("fTipoCondNeg").value = tipo.etiquetaCondicionNegativa || "Mejorar";
+        }
+    }
+
+    cambiarModoConstructorTipo();
+    cambiarPresetEtiquetas();
+    toggleCondicionTipo();
+    renderListaColumnasEvaluacionTemp();
+    document.getElementById("btnGuardarTipo").innerText = "💾 Guardar cambios";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function cancelarEdicionTipo() {
+    tipoCustomEditandoId = null;
+    tipoEditandoEsIntegrado = false;
+    limpiarFormularioTipo();
+    document.getElementById("btnGuardarTipo").innerText = "➕ Agregar al catálogo";
+}
+
+function eliminarTipoCustom(id) {
+    if (!exigirSuperAdmin("Solo el Super Admin puede eliminar tipos de inspección.")) return;
+    let tipo = tiposCustom.find(t => t.id === id);
+    if (!tipo) return;
+    if (!confirm("¿Eliminar este tipo de inspección del catálogo? Las inspecciones ya guardadas con este tipo no se borran.")) return;
+    tiposCustom = tiposCustom.filter(t => t.id !== id);
+    guardarTiposEnStorage();
+    registrarBitacora("Baja de tipo", `"${tipo.nombre}" eliminado del catálogo`);
+    renderCatalogoTipos();
+}
+
+function restablecerTipoIntegrado(id) {
+    if (!exigirSuperAdmin("Solo el Super Admin puede restablecer un tipo de inspección.")) return;
+    if (!overridesTipos[id]) return;
+    if (!confirm("¿Restablecer este formulario a sus preguntas y puntuación originales? Se perderá la personalización.")) return;
+    let nombre = tipoPorId(id).nombre;
+    delete overridesTipos[id];
+    guardarOverridesEnStorage();
+    registrarBitacora("Restablecer tipo integrado", `"${nombre}" vuelve a su versión original`);
+    renderCatalogoTipos();
+}
+
+/* ==================== NUEVA INSPECCIÓN ==================== */
+function iniciarNuevaInspeccion(empresa, tipoId, insertarFilaVacia) {
+    let tipo = tipoPorId(tipoId);
+    if (!tipo) return;
+    inspeccionActual = {
+        empresa, tipoId, nave:"", realizadoPor:"", fecha: new Date().toISOString().slice(0,10),
+        horaInicio:"", lugarInicio:"", observaciones:""
+    };
+    if (tipo.modo === "muestreo") inspeccionActual.filas = [];
+    else { inspeccionActual.items = {}; tipo.checklist.forEach(it => { inspeccionActual.items[it.id] = { condicion:null, valoracion:null, especifique:"" }; }); }
+
+    document.getElementById("nuevaTituloInspeccion").innerText = "📋 " + tipo.nombre;
+    document.getElementById("nuevaSubtituloInspeccion").innerText = tipo.modo === "muestreo"
+        ? `${empresa}${tipo.documento ? " · Documento " + tipo.documento : ""} · agrega una fila por cada área/equipo/persona revisada.`
+        : `${empresa}${tipo.documento ? " · Documento " + tipo.documento : ""} · ${tipo.checklist.length} elementos, ${tipo.puntosPorItem.toFixed(2)} puntos cada uno.`;
+
+    document.getElementById("fNuevaNave").value = "";
+    document.getElementById("fNuevaRealizadoPor").value = "";
+    document.getElementById("fNuevaFecha").value = inspeccionActual.fecha;
+    document.getElementById("fNuevaHora").value = "";
+    document.getElementById("fNuevaLugar").value = "";
+    document.getElementById("fNuevaObservaciones").value = "";
+
+    renderListaNaves();
+
+    document.getElementById("cardChecklistFijo").style.display = tipo.modo === "muestreo" ? "none" : "block";
+    document.getElementById("cardMuestreo").style.display = tipo.modo === "muestreo" ? "block" : "none";
+
+    if (tipo.modo === "muestreo") {
+        renderCabeceraMuestreo(tipo);
+        if (insertarFilaVacia !== false) agregarFilaMuestreo();
+        else renderFilasMuestreo(tipo);
+    } else {
+        renderItemsFormulario(tipo);
+    }
+    actualizarPuntajeVivo();
+}
+
+function renderListaNaves() {
+    let naves = [...new Set(inspecciones.map(i => i.nave).filter(Boolean))];
+    document.getElementById("listaNaves").innerHTML = naves.map(n => `<option value="${n}">`).join("");
+}
+
+function renderItemsFormulario(tipo) {
+    let cont = document.getElementById("listaItemsFormulario");
+    let etiquetaPos = tipo.etiquetaValoracionPositiva || "Ok";
+    let etiquetaNeg = tipo.etiquetaValoracionNegativa || "Corregir";
+    let etiquetaCondPos = tipo.etiquetaCondicionPositiva || "Adecuado";
+    let etiquetaCondNeg = tipo.etiquetaCondicionNegativa || "Mejorar";
+    let seccionActual = null;
+
+    cont.innerHTML = tipo.checklist.map(it => {
+        let encabezado = "";
+        if (it.seccion && it.seccion !== seccionActual) {
+            seccionActual = it.seccion;
+            encabezado = `<div style="font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--accent-blue); margin:16px 0 2px 0; padding-top:12px; border-top:1px solid var(--line);">${it.seccion}</div>`;
+        }
+        return `${encabezado}
+        <div class="item-row">
+            <div class="item-num">${String(it.id).padStart(2,"0")}</div>
+            <div>
+                <div class="item-nombre">${it.nombre}</div>
+                <div class="item-controles">
+                    ${tipo.tieneCondicion ? `<div class="btn-group condicion" data-item="${it.id}">
+                        <button type="button" data-val="adecuado" onclick="marcarCondicion(${it.id},'adecuado',this)">${etiquetaCondPos}</button>
+                        <button type="button" data-val="mejorar" onclick="marcarCondicion(${it.id},'mejorar',this)">${etiquetaCondNeg}</button>
+                    </div>` : ""}
+                    <div class="btn-group valoracion" data-item="${it.id}">
+                        <button type="button" data-val="ok" onclick="marcarValoracion(${it.id},'ok',this)">✓ ${etiquetaPos}</button>
+                        <button type="button" data-val="corregir" onclick="marcarValoracion(${it.id},'corregir',this)">✕ ${etiquetaNeg}</button>
+                    </div>
+                </div>
+                <input class="item-especifique" oninput="actualizarEspecifique(${it.id}, this.value)" placeholder="Especifique${it.pistaEspecifique ? " — " + it.pistaEspecifique : " (opcional)"}">
+            </div>
+        </div>`;
+    }).join("");
+}
+
+// Reaplica en el DOM el estado ya guardado de una inspección (usado al Editar), tanto para
+// checklist fijo como para las filas de muestreo — sin esto, editar mostraría todo en blanco.
+function aplicarEstadoAlFormulario(tipo) {
+    if (tipo.modo === "muestreo") { renderFilasMuestreo(tipo); return; }
+    tipo.checklist.forEach(it => {
+        let v = inspeccionActual.items[it.id];
+        if (!v) return;
+        let filaCondicion = document.querySelector(`.btn-group.condicion[data-item="${it.id}"]`);
+        let filaValoracion = document.querySelector(`.btn-group.valoracion[data-item="${it.id}"]`);
+        if (v.condicion && filaCondicion) filaCondicion.querySelector(`button[data-val="${v.condicion}"]`)?.classList.add("activo");
+        if (v.valoracion && filaValoracion) filaValoracion.querySelector(`button[data-val="${v.valoracion}"]`)?.classList.add("activo");
+        let inputEspecifique = (filaValoracion || filaCondicion)?.parentElement?.querySelector(".item-especifique");
+        if (inputEspecifique && v.especifique) inputEspecifique.value = v.especifique;
+    });
+}
+
+function marcarCondicion(id, valor, btn) {
+    inspeccionActual.items[id].condicion = valor;
+    btn.parentElement.querySelectorAll("button").forEach(b => b.classList.remove("activo"));
+    btn.classList.add("activo");
+}
+function marcarValoracion(id, valor, btn) {
+    inspeccionActual.items[id].valoracion = valor;
+    btn.parentElement.querySelectorAll("button").forEach(b => b.classList.remove("activo"));
+    btn.classList.add("activo");
+    actualizarPuntajeVivo();
+}
+function actualizarEspecifique(id, valor) {
+    inspeccionActual.items[id].especifique = valor;
+}
+
+/* ---- Modo "muestreo": filas dinámicas (una por área/PC/departamento revisado) ---- */
+function renderCabeceraMuestreo(tipo) {
+    let ths = tipo.columnasDescriptivas.map(c => `<th>${c.label}</th>`).join("");
+    ths += tipo.columnasEvaluacion.map(c => c.tipo === "conteo" ? `<th>${c.labelTotal}</th><th>${c.labelCumple}</th>` : `<th>${c.label}</th>`).join("");
+    ths += `<th>${tipo.columnaObservacion.label}</th><th></th>`;
+    document.getElementById("theadMuestreo").innerHTML = ths;
+}
+
+function renderFilasMuestreo(tipo) {
+    let tbody = document.getElementById("tbodyMuestreo");
+    if (inspeccionActual.filas.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:var(--text-muted); padding:16px;">Agrega la primera fila con el botón de arriba.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = inspeccionActual.filas.map((fila, idx) => {
+        let celdas = tipo.columnasDescriptivas.map(c => `<td><input style="width:140px; padding:5px 7px; border:1px solid var(--line); border-radius:6px; font-size:12.5px;" value="${(fila[c.key]||"").toString().replace(/"/g,'&quot;')}" oninput="actualizarCampoFila(${idx}, '${c.key}', this.value)"></td>`).join("");
+        celdas += tipo.columnasEvaluacion.map(c => {
+            if (c.tipo === "conteo") {
+                let v = fila[c.key] || { total:"", cumple:"" };
+                return `<td><input type="number" min="0" style="width:64px; padding:5px 7px; border:1px solid var(--line); border-radius:6px; font-size:12.5px;" value="${v.total}" oninput="actualizarCampoConteo(${idx}, '${c.key}', 'total', this.value)"></td>
+                        <td><input type="number" min="0" style="width:64px; padding:5px 7px; border:1px solid var(--line); border-radius:6px; font-size:12.5px;" value="${v.cumple}" oninput="actualizarCampoConteo(${idx}, '${c.key}', 'cumple', this.value)"></td>`;
+            }
+            let v = fila[c.key] || null;
+            let labelSi = c.etiquetaSi || "Sí", labelNo = c.etiquetaNo || "No";
+            return `<td><div class="btn-group valoracion" style="display:inline-flex;">
+                <button type="button" class="${v==='si' ? 'activo':''}" data-val="ok" onclick="actualizarCampoSiNo(${idx}, '${c.key}', 'si', this)">${labelSi}</button>
+                <button type="button" class="${v==='no' ? 'activo':''}" data-val="corregir" onclick="actualizarCampoSiNo(${idx}, '${c.key}', 'no', this)">${labelNo}</button>
+            </div></td>`;
+        }).join("");
+        celdas += `<td><input style="width:160px; padding:5px 7px; border:1px solid var(--line); border-radius:6px; font-size:12.5px;" value="${(fila[tipo.columnaObservacion.key]||"").toString().replace(/"/g,'&quot;')}" oninput="actualizarCampoFila(${idx}, '${tipo.columnaObservacion.key}', this.value)"></td>`;
+        celdas += `<td><button class="btn-chico rojo" onclick="eliminarFilaMuestreo(${idx})">✕</button></td>`;
+        return `<tr>${celdas}</tr>`;
+    }).join("");
+}
+
+function agregarFilaMuestreo() {
+    let tipo = tipoPorId(inspeccionActual.tipoId);
+    let fila = {};
+    tipo.columnasDescriptivas.forEach(c => fila[c.key] = "");
+    tipo.columnasEvaluacion.forEach(c => fila[c.key] = c.tipo === "conteo" ? { total:"", cumple:"" } : null);
+    fila[tipo.columnaObservacion.key] = "";
+    inspeccionActual.filas.push(fila);
+    renderFilasMuestreo(tipo);
+    actualizarPuntajeVivo();
+}
+function eliminarFilaMuestreo(idx) {
+    inspeccionActual.filas.splice(idx, 1);
+    let tipo = tipoPorId(inspeccionActual.tipoId);
+    renderFilasMuestreo(tipo);
+    actualizarPuntajeVivo();
+}
+function actualizarCampoFila(idx, key, valor) { inspeccionActual.filas[idx][key] = valor; }
+function actualizarCampoConteo(idx, key, sub, valor) {
+    if (!inspeccionActual.filas[idx][key]) inspeccionActual.filas[idx][key] = { total:"", cumple:"" };
+    inspeccionActual.filas[idx][key][sub] = valor === "" ? "" : Math.max(0, parseInt(valor) || 0);
+    actualizarPuntajeVivo();
+}
+function actualizarCampoSiNo(idx, key, valor, btn) {
+    inspeccionActual.filas[idx][key] = valor;
+    btn.parentElement.querySelectorAll("button").forEach(b => b.classList.remove("activo"));
+    btn.classList.add("activo");
+    actualizarPuntajeVivo();
+}
+
+/* ---- Cálculo de puntaje: dos caminos según el modo del tipo de inspección ---- */
+function calcularPuntaje(insp) {
+    let tipo = tipoPorId(insp.tipoId);
+    if (tipo.modo === "muestreo") return calcularPuntajeMuestreo(insp, tipo);
+
+    let ok = 0, corregir = 0, pendientes = 0;
+    let itemsCorregir = [];
+    tipo.checklist.forEach(it => {
+        let v = insp.items[it.id];
+        if (v.valoracion === "ok") ok++;
+        else if (v.valoracion === "corregir") { corregir++; itemsCorregir.push({ nombre: it.nombre, especifique: v.especifique }); }
+        else pendientes++;
+    });
+    let maxPuntaje = tipo.checklist.length * tipo.puntosPorItem;
+    let puntaje = ok * tipo.puntosPorItem;
+    let pct = maxPuntaje > 0 ? (puntaje / maxPuntaje) * 100 : 0;
+    let nivel = pct >= 80 ? "Adecuado" : pct >= 61 ? "Medio" : "Bajo";
+    return { puntaje, maxPuntaje, pct, nivel, ok, corregir, pendientes, totalItems: tipo.checklist.length, itemsCorregir, esMuestreo:false };
+}
+
+function calcularPuntajeMuestreo(insp, tipo) {
+    let positivos = 0, totalPosibles = 0;
+    let itemsCorregir = [];
+    (insp.filas || []).forEach((fila, idx) => {
+        let huboHallazgo = false;
+        tipo.columnasEvaluacion.forEach(c => {
+            if (c.tipo === "conteo") {
+                let v = fila[c.key] || {};
+                let total = Number(v.total) || 0;
+                let cumple = Math.min(Number(v.cumple) || 0, total);
+                if (total > 0) {
+                    positivos += cumple;
+                    totalPosibles += total;
+                    if (cumple < total) huboHallazgo = true;
+                }
+            } else if (fila[c.key] === "si" || fila[c.key] === "no") {
+                totalPosibles += 1;
+                if (fila[c.key] === "si") positivos += 1; else huboHallazgo = true;
+            }
+        });
+        if (huboHallazgo) {
+            let etiqueta = tipo.columnasDescriptivas.map(c => fila[c.key]).filter(Boolean).join(" — ") || `Fila ${idx + 1}`;
+            itemsCorregir.push({ nombre: etiqueta, especifique: fila[tipo.columnaObservacion.key] || "" });
+        }
+    });
+    let pct = totalPosibles > 0 ? (positivos / totalPosibles) * 100 : 0;
+    let nivel = pct >= 80 ? "Adecuado" : pct >= 61 ? "Medio" : "Bajo";
+    return { puntaje: positivos, maxPuntaje: totalPosibles, pct, nivel, ok: positivos, corregir: totalPosibles - positivos, pendientes: 0, totalItems: (insp.filas || []).length, itemsCorregir, esMuestreo:true };
+}
+
+function claseNivel(nivel) {
+    return nivel === "Adecuado" ? "badge-adecuado" : nivel === "Medio" ? "badge-medio" : "badge-bajo";
+}
+function colorNivel(nivel) {
+    return nivel === "Adecuado" ? "var(--sec-green)" : nivel === "Medio" ? "var(--sec-yellow)" : "var(--sec-red)";
+}
+function nivelDePct(pct) {
+    return pct >= 80 ? "Adecuado" : pct >= 61 ? "Medio" : "Bajo";
+}
+
+function actualizarPuntajeVivo() {
+    let r = calcularPuntaje(inspeccionActual);
+    let tipo = tipoPorId(inspeccionActual.tipoId);
+    document.getElementById("puntajeVivoNum").innerText = tipo.modo === "muestreo" ? r.puntaje + " / " + r.maxPuntaje + " puntos" : r.puntaje.toFixed(1) + " / " + r.maxPuntaje.toFixed(0);
+    let marcados = r.ok + r.corregir;
+    let etiquetaConteo = tipo.modo === "muestreo" ? `${r.totalItems} fila(s) registrada(s)` : `${marcados} marcados de ${r.totalItems}`;
+    document.getElementById("puntajeVivoDetalle").innerHTML = `${etiquetaConteo} · <span class="badge-nivel ${claseNivel(r.nivel)}">${marcados === 0 ? "Sin datos" : r.nivel}</span>`;
+    let gauge = document.getElementById("gaugeVivo");
+    gauge.style.setProperty("--gauge-pct", r.pct);
+    gauge.style.setProperty("--gauge-color", colorNivel(r.nivel));
+    document.getElementById("gaugeVivoTexto").innerText = r.pct.toFixed(0) + "%";
+}
+
+function guardarInspeccion() {
+    inspeccionActual.nave = document.getElementById("fNuevaNave").value.trim();
+    inspeccionActual.realizadoPor = document.getElementById("fNuevaRealizadoPor").value.trim();
+    inspeccionActual.fecha = document.getElementById("fNuevaFecha").value;
+    inspeccionActual.horaInicio = document.getElementById("fNuevaHora").value;
+    inspeccionActual.lugarInicio = document.getElementById("fNuevaLugar").value.trim();
+    inspeccionActual.observaciones = document.getElementById("fNuevaObservaciones").value.trim();
+
+    if (!inspeccionActual.nave) { alert("Indica la Nave / Empresa antes de guardar."); return; }
+    if (!inspeccionActual.fecha) { alert("Indica la fecha de la inspección."); return; }
+    if (!inspeccionActual.realizadoPor) { alert("Indica quién realizó la inspección."); return; }
+
+    let tipo = tipoPorId(inspeccionActual.tipoId);
+    // El puntaje se calcula y se guarda "congelado" junto con el registro, para que si el
+    // formulario cambia más adelante, las inspecciones viejas no cambien de puntaje solas.
+    inspeccionActual.resumen = calcularPuntaje(inspeccionActual);
+
+    if (inspeccionEditandoId) {
+        inspeccionActual.id = inspeccionEditandoId;
+        let idx = inspecciones.findIndex(i => i.id === inspeccionEditandoId);
+        let anterior = inspecciones[idx];
+        inspeccionActual.creadaEn = anterior.creadaEn;
+        inspeccionActual.editadaEn = new Date().toISOString();
+        inspecciones[idx] = inspeccionActual;
+        guardarEnStorage();
+        registrarBitacora("Edición", `${tipo.nombre} — ${inspeccionActual.empresa} · ${inspeccionActual.nave} · ${inspeccionActual.fecha} (${anterior.resumen.pct.toFixed(0)}% → ${inspeccionActual.resumen.pct.toFixed(0)}%)`);
+        inspeccionEditandoId = null;
+        alert(`Inspección actualizada — ${inspeccionActual.resumen.pct.toFixed(0)}% (${inspeccionActual.resumen.nivel})`);
+    } else {
+        inspeccionActual.id = "insp_" + Date.now();
+        inspeccionActual.creadaEn = new Date().toISOString();
+        inspecciones.push(inspeccionActual);
+        guardarEnStorage();
+        registrarBitacora("Creación", `${tipo.nombre} — ${inspeccionActual.empresa} · ${inspeccionActual.nave} · ${inspeccionActual.fecha} (${inspeccionActual.resumen.pct.toFixed(0)}%, ${inspeccionActual.resumen.nivel})`);
+        alert(`Inspección guardada — ${inspeccionActual.resumen.pct.toFixed(0)}% (${inspeccionActual.resumen.nivel})`);
+    }
+
+    verDetalleInspeccion(inspeccionActual.id);
+}
+
+function editarInspeccion(id) {
+    let insp = inspecciones.find(i => i.id === id);
+    if (!insp) return;
+    let tipo = tipoPorId(insp.tipoId);
+    if (!tipo) { alert("El tipo de inspección de este registro ya no existe en el catálogo."); return; }
+
+    inspeccionEditandoId = id;
+    inspeccionActual = JSON.parse(JSON.stringify(insp)); // copia, para no mutar el historial hasta guardar
+
+    document.getElementById("nuevaTituloInspeccion").innerText = "✏️ Editando: " + tipo.nombre;
+    document.getElementById("nuevaSubtituloInspeccion").innerText = `${insp.empresa}${tipo.documento ? " · Documento " + tipo.documento : ""} · editando registro existente.`;
+    document.getElementById("fNuevaNave").value = insp.nave || "";
+    document.getElementById("fNuevaRealizadoPor").value = insp.realizadoPor || "";
+    document.getElementById("fNuevaFecha").value = insp.fecha || "";
+    document.getElementById("fNuevaHora").value = insp.horaInicio || "";
+    document.getElementById("fNuevaLugar").value = insp.lugarInicio || "";
+    document.getElementById("fNuevaObservaciones").value = insp.observaciones || "";
+
+    renderListaNaves();
+    document.getElementById("cardChecklistFijo").style.display = tipo.modo === "muestreo" ? "none" : "block";
+    document.getElementById("cardMuestreo").style.display = tipo.modo === "muestreo" ? "block" : "none";
+
+    if (tipo.modo === "muestreo") {
+        renderCabeceraMuestreo(tipo);
+    } else {
+        renderItemsFormulario(tipo);
+    }
+    aplicarEstadoAlFormulario(tipo);
+    actualizarPuntajeVivo();
+    mostrarTab("nueva");
+}
+
+/* ==================== HISTORIAL ==================== */
+function renderHistorial() {
+    let tbody = document.getElementById("tbodyHistorial");
+    if (inspecciones.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:24px;">Todavía no hay inspecciones guardadas.</td></tr>`;
+        return;
+    }
+    let ordenadas = inspecciones.slice().sort((a,b) => (b.fecha||"").localeCompare(a.fecha||""));
+    tbody.innerHTML = ordenadas.map(insp => {
+        let tipo = tipoPorId(insp.tipoId);
+        return `
+        <tr>
+            <td>${insp.fecha || "—"}</td>
+            <td>${insp.empresa || "—"}</td>
+            <td>${tipo ? tipo.nombre : "—"}</td>
+            <td>${insp.nave || "—"}</td>
+            <td>${insp.realizadoPor || "—"}</td>
+            <td>${insp.resumen.pct.toFixed(0)}%</td>
+            <td><span class="badge-nivel ${claseNivel(insp.resumen.nivel)}">${insp.resumen.nivel}</span></td>
+            <td>
+                <button class="btn-chico" onclick="verDetalleInspeccion('${insp.id}')">Ver</button>
+                <button class="btn-chico" onclick="editarInspeccion('${insp.id}')">Editar</button>
+                <button class="btn-chico rojo" onclick="eliminarInspeccion('${insp.id}')">Eliminar</button>
+            </td>
+        </tr>
+    `;
+    }).join("");
+}
+
+function eliminarInspeccion(id) {
+    let insp = inspecciones.find(i => i.id === id);
+    if (!insp) return;
+    if (!confirm("¿Eliminar esta inspección? No se puede deshacer.")) return;
+    let tipo = tipoPorId(insp.tipoId);
+    inspecciones = inspecciones.filter(i => i.id !== id);
+    guardarEnStorage();
+    registrarBitacora("Eliminación", `${tipo ? tipo.nombre : insp.tipoId} — ${insp.empresa} · ${insp.nave} · ${insp.fecha} (era ${insp.resumen.pct.toFixed(0)}%, ${insp.resumen.nivel})`);
+    renderHistorial();
+}
+
+/* ==================== DETALLE / IMPRESIÓN ==================== */
+function verDetalleInspeccion(id) {
+    let insp = inspecciones.find(i => i.id === id);
+    if (!insp) return;
+    let tipo = tipoPorId(insp.tipoId);
+    let r = insp.resumen;
+
+    let filasCorregir = r.itemsCorregir.length === 0
+        ? `<p style="color:var(--sec-green); font-weight:600; font-size:13px;">✅ ${tipo.modo === "muestreo" ? "No se registraron hallazgos." : "No se marcaron elementos para corregir."}</p>`
+        : `<table class="tabla-simple"><thead><tr><th>${tipo.modo === "muestreo" ? "Fila con hallazgo" : "Elemento"}</th><th>Especifique / acciones</th></tr></thead><tbody>
+            ${r.itemsCorregir.map(it => `<tr><td>${it.nombre}</td><td>${it.especifique || "—"}</td></tr>`).join("")}
+           </tbody></table>`;
+
+    document.getElementById("detalleContenido").innerHTML = `
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:16px; align-items:center; margin-bottom:16px;">
+                <div>
+                    <h2 style="margin:0 0 4px 0; font-size:19px;">${tipo.nombre}</h2>
+                    <div style="font-size:12.5px; color:var(--text-muted);">${insp.empresa}${tipo.documento ? " · Documento " + tipo.documento : ""} · ${insp.nave} · ${insp.fecha}${insp.horaInicio ? " · " + insp.horaInicio : ""}</div>
+                    <div style="font-size:12.5px; color:var(--text-muted);">Realizado por: ${insp.realizadoPor}${insp.lugarInicio ? " · Lugar inicio: " + insp.lugarInicio : ""}</div>
+                </div>
+                <div class="gauge" style="--gauge-pct:${r.pct}; --gauge-color:${colorNivel(r.nivel)};"><span>${r.pct.toFixed(0)}%</span></div>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
+                <span class="badge-nivel ${claseNivel(r.nivel)}" style="font-size:13px; padding:5px 14px;">${r.nivel}</span>
+                <span style="font-size:13px; color:var(--text-muted);">Puntaje: ${r.puntaje.toFixed(1)} / ${r.maxPuntaje.toFixed(0)} · ${r.ok} Ok · ${r.corregir} a corregir${r.pendientes ? " · " + r.pendientes + " sin marcar" : ""}</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-top:0; font-size:14px;">${tipo.modo === "muestreo" ? "Hallazgos encontrados en la muestra" : "Elementos marcados para corregir"}</h3>
+            ${filasCorregir}
+        </div>
+
+        ${insp.observaciones ? `<div class="card"><h3 style="margin-top:0; font-size:14px;">Observaciones generales</h3><p style="font-size:13.5px; white-space:pre-wrap;">${insp.observaciones}</p></div>` : ""}
+    `;
+
+    document.getElementById("tabBtnDetalle").style.display = "inline-block";
+    mostrarTab("detalle");
+}
+
+/* ==================== DASHBOARD ==================== */
+function renderDashboard() {
+    let vacio = document.getElementById("dashboardVacio");
+    let contenido = document.getElementById("dashboardContenido");
+    if (inspecciones.length === 0) {
+        vacio.style.display = "block";
+        contenido.style.display = "none";
+        return;
+    }
+    vacio.style.display = "none";
+    contenido.style.display = "block";
+
+    let ordenadas = inspecciones.slice().sort((a,b) => (a.fecha||"").localeCompare(b.fecha||""));
+    let promedio = ordenadas.reduce((s,i) => s + i.resumen.pct, 0) / ordenadas.length;
+    let ultima = ordenadas[ordenadas.length - 1];
+
+    // Elemento más recurrente marcado "Corregir"
+    let conteoItems = {};
+    ordenadas.forEach(insp => insp.resumen.itemsCorregir.forEach(it => { conteoItems[it.nombre] = (conteoItems[it.nombre] || 0) + 1; }));
+    let itemTop = Object.entries(conteoItems).sort((a,b) => b[1]-a[1])[0];
+
+    document.getElementById("kpiCardsDashboard").innerHTML = `
+        <div class="kpi-card"><h4>Promedio general</h4><div class="val">${promedio.toFixed(0)}%</div><div class="sub">${ordenadas.length} inspección(es)</div></div>
+        <div class="kpi-card"><h4>Última inspección</h4><div class="val">${ultima.resumen.pct.toFixed(0)}%</div><div class="sub">${ultima.nave} · ${ultima.fecha}</div></div>
+        <div class="kpi-card"><h4>Total de inspecciones</h4><div class="val">${ordenadas.length}</div><div class="sub">Registradas hasta ahora</div></div>
+        <div class="kpi-card"><h4>Problema más recurrente</h4><div class="val" style="font-size:15px;">${itemTop ? itemTop[0] : "—"}</div><div class="sub">${itemTop ? "Marcado a corregir " + itemTop[1] + " vez/veces" : "Sin datos aún"}</div></div>
+    `;
+
+    // Tendencia en el tiempo
+    let ctxT = document.getElementById("chartTendencia");
+    if (chartTendencia) chartTendencia.destroy();
+    chartTendencia = new Chart(ctxT, {
+        type: "line",
+        data: { labels: ordenadas.map(i => i.fecha), datasets: [{
+            label: "% de cumplimiento", data: ordenadas.map(i => Number(i.resumen.pct.toFixed(1))),
+            borderColor: "#3552D6", backgroundColor: "rgba(53,82,214,0.08)", fill: true, tension: 0.3, pointRadius: 3
+        }]},
+        options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, max:100 } } }
+    });
+
+    // Promedio por empresa
+    let porEmpresa = {};
+    ordenadas.forEach(i => { if (!porEmpresa[i.empresa]) porEmpresa[i.empresa] = []; porEmpresa[i.empresa].push(i.resumen.pct); });
+    let empresasConDatos = Object.keys(porEmpresa);
+    let promediosEmpresa = empresasConDatos.map(e => porEmpresa[e].reduce((s,v)=>s+v,0) / porEmpresa[e].length);
+    let ctxE = document.getElementById("chartPorEmpresa");
+    if (chartPorEmpresa) chartPorEmpresa.destroy();
+    chartPorEmpresa = new Chart(ctxE, {
+        type: "bar",
+        data: { labels: empresasConDatos, datasets: [{ label:"% promedio", data: promediosEmpresa.map(v=>Number(v.toFixed(1))), backgroundColor: "#3552D6" }] },
+        options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, max:100 } } }
+    });
+
+    // Promedio por nave
+    let porNave = {};
+    ordenadas.forEach(i => { if (!porNave[i.nave]) porNave[i.nave] = []; porNave[i.nave].push(i.resumen.pct); });
+    let naves = Object.keys(porNave);
+    let promediosNave = naves.map(n => porNave[n].reduce((s,v)=>s+v,0) / porNave[n].length);
+    let ctxN = document.getElementById("chartPorNave");
+    if (chartPorNave) chartPorNave.destroy();
+    chartPorNave = new Chart(ctxN, {
+        type: "bar",
+        data: { labels: naves, datasets: [{ label:"% promedio", data: promediosNave.map(v=>Number(v.toFixed(1))), backgroundColor: "#B75E23" }] },
+        options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, max:100 } } }
+    });
+
+    // Elementos más recurrentes en "Corregir"
+    let topItems = Object.entries(conteoItems).sort((a,b) => b[1]-a[1]).slice(0,8);
+    let ctxR = document.getElementById("chartRecurrentes");
+    if (chartRecurrentes) chartRecurrentes.destroy();
+    if (topItems.length === 0) {
+        ctxR.parentElement.innerHTML = `<p style="color:var(--sec-green); font-size:13px; font-weight:600;">✅ Ningún elemento se ha marcado como "Corregir" todavía.</p>`;
+    } else {
+        chartRecurrentes = new Chart(ctxR, {
+            type: "bar",
+            data: { labels: topItems.map(t=>t[0]), datasets: [{ label:"Veces marcado a corregir", data: topItems.map(t=>t[1]), backgroundColor: "#D6483F" }] },
+            options: { indexAxis:"y", responsive:true, maintainAspectRatio:false, scales:{ x:{ beginAtZero:true, ticks:{ stepSize:1 } } } }
+        });
+    }
+}
+
+/* ==================== COMPARATIVA POR AÑO ==================== */
+const NOMBRES_MES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+
+function poblarFiltrosComparativa() {
+    let selEmp = document.getElementById("filtroComparativaEmpresa");
+    if (selEmp.options.length <= 1) {
+        selEmp.innerHTML = `<option value="todas">Todas las empresas</option>` + EMPRESAS.map(e => `<option value="${e}">${e}</option>`).join("");
+    }
+    let selTipo = document.getElementById("filtroComparativaTipo");
+    let valorPrevio = selTipo.value || "todos";
+    selTipo.innerHTML = `<option value="todos">Todos los tipos</option>` + todosLosTipos().map(t => `<option value="${t.id}">${t.nombre}${t.documento ? " (" + t.documento + ")" : ""}</option>`).join("");
+    if ([...selTipo.options].some(o => o.value === valorPrevio)) selTipo.value = valorPrevio;
+}
+
+function renderComparativa() {
+    poblarFiltrosComparativa();
+    let filtroEmp = document.getElementById("filtroComparativaEmpresa").value;
+    let filtroTipo = document.getElementById("filtroComparativaTipo").value;
+
+    let filtradas = inspecciones.filter(i => (filtroEmp === "todas" || i.empresa === filtroEmp) && (filtroTipo === "todos" || i.tipoId === filtroTipo));
+    let conAnio = filtradas.filter(i => i.fecha && i.fecha.length >= 4).map(i => Object.assign({}, i, { anio: i.fecha.slice(0,4), mes: parseInt(i.fecha.slice(5,7), 10) }));
+
+    let vacio = document.getElementById("comparativaVacio");
+    let contenido = document.getElementById("comparativaContenido");
+    let anios = [...new Set(conAnio.map(i => i.anio))].sort();
+    if (anios.length === 0) {
+        vacio.style.display = "block";
+        contenido.style.display = "none";
+        return;
+    }
+    vacio.style.display = "none";
+    contenido.style.display = "block";
+
+    // Promedio y conteo por año
+    let porAnio = {};
+    anios.forEach(a => { porAnio[a] = conAnio.filter(i => i.anio === a); });
+    let promedioPorAnio = anios.map(a => porAnio[a].reduce((s,i) => s + i.resumen.pct, 0) / porAnio[a].length);
+
+    // KPIs: año más reciente vs año anterior
+    let ultimoAnio = anios[anios.length - 1];
+    let anioAnterior = anios.length > 1 ? anios[anios.length - 2] : null;
+    let promUltimo = promedioPorAnio[promedioPorAnio.length - 1];
+    let promAnterior = anioAnterior ? promedioPorAnio[promedioPorAnio.length - 2] : null;
+    let delta = promAnterior != null ? promUltimo - promAnterior : null;
+
+    document.getElementById("kpiCardsComparativa").innerHTML = `
+        <div class="kpi-card"><h4>Años con datos</h4><div class="val">${anios.length}</div><div class="sub">${anios[0]} — ${ultimoAnio}</div></div>
+        <div class="kpi-card"><h4>Promedio ${ultimoAnio}</h4><div class="val">${promUltimo.toFixed(0)}%</div><div class="sub">${porAnio[ultimoAnio].length} inspección(es)</div></div>
+        <div class="kpi-card"><h4>Vs. ${anioAnterior || "año anterior"}</h4><div class="val ${delta == null ? "" : (delta >= 0 ? "kpi-trend-up" : "kpi-trend-down")}">${delta == null ? "—" : (delta >= 0 ? "▲ +" : "▼ ") + delta.toFixed(1) + " pts"}</div><div class="sub">${delta == null ? "Todavía no hay año anterior para comparar" : (delta >= 0 ? "Mejoró respecto al año anterior" : "Bajó respecto al año anterior")}</div></div>
+    `;
+
+    // Chart A: promedio por año
+    let ctxA = document.getElementById("chartPorAnio");
+    if (chartPorAnio) chartPorAnio.destroy();
+    chartPorAnio = new Chart(ctxA, {
+        type: "bar",
+        data: { labels: anios, datasets: [{ label:"% promedio de cumplimiento", data: promedioPorAnio.map(v => Number(v.toFixed(1))), backgroundColor: anios.map((a,idx) => a === ultimoAnio ? "#3552D6" : "#9AA1B4") }] },
+        options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, max:100 } } }
+    });
+
+    // Chart B: comparativa mes a mes entre años (una línea por año)
+    let coloresLinea = ["#3552D6","#D6483F","#1C9A6C","#DD9A2E","#5B3FBF","#B75E23"];
+    let datasetsMes = anios.map((a, idx) => {
+        let datosPorMes = NOMBRES_MES.map((_, mIdx) => {
+            let delMes = porAnio[a].filter(i => i.mes === (mIdx + 1));
+            return delMes.length > 0 ? Number((delMes.reduce((s,i) => s + i.resumen.pct, 0) / delMes.length).toFixed(1)) : null;
+        });
+        return { label: a, data: datosPorMes, borderColor: coloresLinea[idx % coloresLinea.length], backgroundColor: coloresLinea[idx % coloresLinea.length], tension:0.3, spanGaps:true, pointRadius:3 };
+    });
+    let ctxM = document.getElementById("chartMensualPorAnio");
+    if (chartMensualPorAnio) chartMensualPorAnio.destroy();
+    chartMensualPorAnio = new Chart(ctxM, {
+        type: "line",
+        data: { labels: NOMBRES_MES, datasets: datasetsMes },
+        options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, max:100 } } }
+    });
+
+    // Tabla detalle por año
+    let tbody = document.getElementById("tbodyComparativaAnio");
+    tbody.innerHTML = anios.map((a, idx) => {
+        let prom = promedioPorAnio[idx];
+        let nivel = nivelDePct(prom);
+        let deltaFila = idx > 0 ? prom - promedioPorAnio[idx - 1] : null;
+        return `<tr>
+            <td>${a}</td>
+            <td>${porAnio[a].length}</td>
+            <td>${prom.toFixed(0)}%</td>
+            <td><span class="badge-nivel ${claseNivel(nivel)}">${nivel}</span></td>
+            <td>${deltaFila == null ? "—" : `<span class="${deltaFila >= 0 ? "kpi-trend-up" : "kpi-trend-down"}">${deltaFila >= 0 ? "▲ +" : "▼ "}${deltaFila.toFixed(1)} pts</span>`}</td>
+        </tr>`;
+    }).join("");
+}
+
+/* ==================== INICIO ==================== */
+intentarSesionGuardada();
+</script>
+</body>
+</html>
