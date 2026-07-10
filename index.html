@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Inspecciones de Cumplimiento · Notions Group</title>
+<title>Inspecciones de Seguridad Física · Now Logistics</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -131,7 +131,7 @@ table.tabla-simple td { padding:8px 10px; border-bottom:1px solid var(--line); }
         <div class="topbar-logo">NL</div>
         <div>
             <h1>Inspecciones de Seguridad</h1>
-            <div class="subtitle">Notions Group · Prototipo — datos guardados solo en este navegador</div>
+            <div class="subtitle">Now Logistics · Prototipo — datos guardados solo en este navegador</div>
         </div>
     </div>
     <div id="topbarSesion" style="display:flex; align-items:center; gap:10px;"></div>
@@ -244,6 +244,10 @@ table.tabla-simple td { padding:8px 10px; border-bottom:1px solid var(--line); }
         </div>
 
         <div class="card" id="cardChecklistFijo">
+            <div id="campoAdicionalWrap" style="display:none; margin-bottom:18px;">
+                <label id="campoAdicionalLabel" style="display:block; font-size:11.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;"></label>
+                <select id="campoAdicionalSelect" onchange="actualizarCampoAdicional(this.value)" style="max-width:420px;"></select>
+            </div>
             <h3 style="margin-top:0; font-size:14px;">Checklist</h3>
             <div id="listaItemsFormulario"></div>
         </div>
@@ -509,7 +513,7 @@ const CHECKLIST_SEG_FISICA = [
 
 const EMPRESAS = ["Now Logistics", "Notions Dominicana", "Global Technology Group"];
 
-const TIPO_SEG_FISICA = { id:"seg_fisica", nombre:"Inspección de Seguridad Física", documento:"NOW-SGS-FRM-28", puntosPorItem:2.5, empresas:["Now Logistics"], checklist: CHECKLIST_SEG_FISICA, integrado:true, tieneCondicion:true, etiquetaCondicionPositiva:"Adecuado", etiquetaCondicionNegativa:"Mejorar", etiquetaValoracionPositiva:"Ok", etiquetaValoracionNegativa:"Corregir" };
+const TIPO_SEG_FISICA = { id:"seg_fisica", nombre:"Inspección de Seguridad Física", documento:"NOW-SGS-FRM-28", puntosPorItem:2.5, empresas:["Now Logistics"], checklist: CHECKLIST_SEG_FISICA, integrado:true, tieneCondicion:true, tieneNA:true, etiquetaCondicionPositiva:"Adecuado", etiquetaCondicionNegativa:"Mejorar", etiquetaValoracionPositiva:"Ok", etiquetaValoracionNegativa:"Corregir" };
 
 /* ---- Inspección General por Departamentos: NOW Logistics y Global Technology Group
    comparten exactamente el mismo checklist de 64 elementos (solo cambia el documento
@@ -629,6 +633,161 @@ const TIPO_COMPUTADORAS = {
     columnaObservacion: {key:"acciones", label:"Acciones ejecutadas en caso de evidenciarse algún hallazgo"}
 };
 
+/* ==================== TIPOS AGREGADOS DESDE "Inspecciones Generales – NTD-GTG-NOW" ====================
+   Estos 11 tipos vienen del formulario consolidado que cubre las 3 empresas. Ese PDF no trae
+   códigos de documento por sección, así que quedaron sin "documento" — se pueden agregar luego
+   desde la pestaña "Tipos de Inspección".
+   Nota sobre "Botiquín": el formulario original pide cantidades exactas (ej. 0-10 unidades) para
+   varios insumos; el motor actual solo maneja Sí/No + un campo de texto libre, así que esos ítems
+   quedaron como "¿hay existencia de X?" con la cantidad exacta anotable en "Especifique". Avísame
+   si prefieres que cambie esto a un campo numérico real. */
+
+const CHECKLIST_BOTIQUIN = [
+    {id:1, nombre:"¿Hay existencia de Diclofenac en Gel?", pistaEspecifique:"Cantidad exacta (0-3)"},
+    {id:2, nombre:"¿Hay existencia de Agua oxigenada?", pistaEspecifique:"Cantidad exacta (0-3)"},
+    {id:3, nombre:"¿Hay existencia de Alcohol isopropílico?", pistaEspecifique:"Cantidad exacta (0-3)"},
+    {id:4, nombre:"¿Hay existencia de Bay rum?", pistaEspecifique:"Cantidad exacta (0-3)"},
+    {id:5, nombre:"¿Hay existencia de Jabón líquido?", pistaEspecifique:"Cantidad exacta (0-3)"},
+    {id:6, nombre:"¿Hay existencia de Nitrofurazona?", pistaEspecifique:"Cantidad exacta (0-2)"},
+    {id:7, nombre:"¿Hay existencia de Curitas?", pistaEspecifique:"Cantidad exacta (0-10)"},
+    {id:8, nombre:"¿Hay existencia de Depresores de lengua?", pistaEspecifique:"Cantidad exacta (0-10)"},
+    {id:9, nombre:"¿Hay existencia de Rolled gauze?", pistaEspecifique:"Cantidad exacta (0-10)"},
+    {id:10, nombre:"¿Hay existencia de Gasas estériles?", pistaEspecifique:"Cantidad exacta (0-10)"},
+    {id:11, nombre:"¿Existe algodón en el área?"},
+    {id:12, nombre:"¿Existe guantes esterilizados en el área?"},
+    {id:13, nombre:"¿Existe loción para ojos (gotas) en el área?"},
+    {id:14, nombre:"¿Existe pinzas en el área?"},
+    {id:15, nombre:"¿Existe vendaje triangular en el área?"},
+    {id:16, nombre:"¿Existe collarín en el área?"},
+    {id:17, nombre:"¿Existe tijera en el área?"},
+    {id:18, nombre:"¿Existe vendajes (liga elástica) en el área?"},
+    {id:19, nombre:"¿Existe bolsa para agua fría o helada en el área?"},
+    {id:20, nombre:"¿Existe un termómetro en el área?"},
+    {id:21, nombre:"¿Existe un manual de primeros auxilios en el área?"},
+    {id:22, nombre:"¿Existen camillas de emergencia en el área?"},
+    {id:23, nombre:"¿Existen sillas para pacientes en el área?"},
+    {id:24, nombre:"¿Existen zafacones para desechos biológicos en el área?"},
+    {id:25, nombre:"¿Existen señalizaciones en el área?"}
+];
+const TIPO_BOTIQUIN = { id:"botiquin_crp", nombre:"Inspección de Estación de Primeros Auxilios (Botiquín)", puntosPorItem:4, empresas:["Now Logistics","Notions Dominicana","Global Technology Group"], checklist: CHECKLIST_BOTIQUIN, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No" };
+
+const CHECKLIST_EXTINTORES = [
+    {id:1, nombre:"¿Los extintores están visibles y ubicados en los puntos designados?"},
+    {id:2, nombre:"¿Se encuentran libres de obstáculos que impidan su uso inmediato?"},
+    {id:3, nombre:"¿Están debidamente identificados y señalizados?"},
+    {id:4, nombre:"¿Cuentan con mantenimiento o inspección vigente?"}
+];
+const TIPO_EXTINTORES = { id:"extintores_crp", nombre:"Inspección de Extintores", puntosPorItem:25, empresas:["Now Logistics","Notions Dominicana","Global Technology Group"], checklist: CHECKLIST_EXTINTORES, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No" };
+
+const CHECKLIST_ANALISIS_AGUA = [
+    {id:1, nombre:"¿Se cuenta con análisis de agua realizados dentro del período establecido?"},
+    {id:2, nombre:"¿Los resultados cumplen con los parámetros de calidad exigidos (físicos, químicos y microbiológicos)?"},
+    {id:3, nombre:"¿Los informes de análisis se encuentran archivados y disponibles para consulta?"},
+    {id:4, nombre:"¿El laboratorio o entidad que realiza el análisis está acreditado o autorizado?"}
+];
+const TIPO_ANALISIS_AGUA = { id:"analisis_agua_crp", nombre:"Inspección de Análisis de Agua", puntosPorItem:25, empresas:["Now Logistics","Notions Dominicana","Global Technology Group"], checklist: CHECKLIST_ANALISIS_AGUA, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No" };
+
+const CHECKLIST_LLAVES = [
+    {id:1, nombre:"¿El gabinete de llaves se encuentra en buen estado y bajo control del personal responsable?"},
+    {id:2, nombre:"¿El inventario de llaves está actualizado y coincide con las llaves disponibles físicamente?"},
+    {id:3, nombre:"¿Las llaves están debidamente identificadas y organizadas en el gabinete?"},
+    {id:4, nombre:"¿Existe un registro de préstamos, entregas o devoluciones de llaves?"},
+    {id:5, nombre:"¿El acceso al gabinete está restringido solo a personal autorizado?"},
+    {id:6, nombre:"¿Se realizan verificaciones periódicas para asegurar la integridad del inventario?"}
+];
+const TIPO_LLAVES = { id:"llaves_crp", nombre:"Inspección de Inventario de Llaves en el Gabinete", puntosPorItem:Number((100/6).toFixed(3)), empresas:["Now Logistics","Notions Dominicana","Global Technology Group"], checklist: CHECKLIST_LLAVES, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No" };
+
+const CHECKLIST_LIBRO_VISITA = [
+    {id:1, nombre:"¿El libro visita se encuentra actualizado y en buen estado?"},
+    {id:2, nombre:"¿Cada entrada de visita o paquetería incluye fecha, hora y nombre completo?"},
+    {id:3, nombre:"¿Se registra el motivo de la visita o descripción de la paquetería recibida/entregada?"},
+    {id:4, nombre:"¿Se anota el nombre y firma de la persona que recibe o entrega?"},
+    {id:5, nombre:"¿El libro se conserva en un lugar seguro y bajo control del personal autorizado?"},
+    {id:6, nombre:"¿Se evita el acceso no registrado de personas o paquetes?"}
+];
+const TIPO_LIBRO_VISITA = { id:"libro_visita_ntd_now", nombre:"Inspección del Libro de Visita y Paquetería", puntosPorItem:Number((100/6).toFixed(3)), empresas:["Notions Dominicana","Now Logistics"], checklist: CHECKLIST_LIBRO_VISITA, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No" };
+
+const CHECKLIST_PIZARRAS = [
+    {id:1, nombre:"¿La pizarra está ubicada en un lugar visible y accesible para todos los colaboradores?"},
+    {id:2, nombre:"¿La pizarra se encuentra en buen estado físico (limpia, sin daños, con materiales legibles)?"},
+    {id:3, nombre:"¿El indicador de \"días sin accidentes\" está actualizado correctamente al día de la inspección?"}
+];
+const TIPO_PIZARRAS = { id:"pizarras_accidentabilidad", nombre:"Inspección de Pizarras de Accidentabilidad", puntosPorItem:Number((100/3).toFixed(3)), empresas:["Now Logistics","Notions Dominicana","Global Technology Group"], checklist: CHECKLIST_PIZARRAS, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No" };
+
+const CHECKLIST_EVACUACION = [
+    {id:1, nombre:"¿La lista de evacuación se encuentra visible en el área designada?"},
+    {id:2, nombre:"¿La lista está actualizada con los nombres de todos los colaboradores actuales del área?"},
+    {id:3, nombre:"¿La lista incluye información de contacto o datos relevantes de emergencia (ej. extensión, brigadista asignado)?"}
+];
+const TIPO_EVACUACION_NTD = { id:"evacuacion_ntd", nombre:"Inspección de Lista de Evacuación", documento:"NTD", puntosPorItem:Number((100/3).toFixed(3)), empresas:["Notions Dominicana"], checklist: CHECKLIST_EVACUACION, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No" };
+const TIPO_EVACUACION_GTG = { id:"evacuacion_gtg", nombre:"Inspección de Lista de Evacuación", documento:"GTG", puntosPorItem:Number((100/3).toFixed(3)), empresas:["Global Technology Group"], checklist: CHECKLIST_EVACUACION, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No" };
+const TIPO_EVACUACION_NOW = { id:"evacuacion_now", nombre:"Inspección de Lista de Evacuación", documento:"NOW", puntosPorItem:Number((100/3).toFixed(3)), empresas:["Now Logistics"], checklist: CHECKLIST_EVACUACION, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No" };
+
+const CHECKLIST_SEGUIMIENTO_RUTAS = [
+    {id:1, nombre:"¿Se cuenta con un plan o itinerario de rutas actualizado?"},
+    {id:2, nombre:"¿El personal encargado conoce y sigue la ruta asignada?"},
+    {id:3, nombre:"¿Se registran las horas de salida y llegada en cada punto de control?"},
+    {id:4, nombre:"¿Se reportan las incidencias o desvíos de ruta en el momento que ocurren?"},
+    {id:5, nombre:"¿Los vehículos utilizados cumplen con las condiciones de seguridad requeridas?"},
+    {id:6, nombre:"¿Se documentan las entregas o actividades realizadas en cada punto de la ruta?"}
+];
+const TIPO_SEGUIMIENTO_RUTAS = { id:"seguimiento_rutas_now", nombre:"Inspección de Seguimiento de Rutas", puntosPorItem:Number((100/6).toFixed(3)), empresas:["Now Logistics"], checklist: CHECKLIST_SEGUIMIENTO_RUTAS, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No" };
+
+const CHECKLIST_INVENTARIO_SELLOS = [
+    {id:1, nombre:"¿El inventario de sellos se encuentra actualizado en el sistema y registro físico?"},
+    {id:2, nombre:"¿Los sellos están almacenados en un lugar seguro con acceso restringido?"},
+    {id:3, nombre:"¿La cantidad física de sellos coincide con la cantidad registrada en el inventario?"},
+    {id:4, nombre:"¿Se lleva un registro de entrega y uso de cada sello?"}
+];
+const TIPO_INVENTARIO_SELLOS = { id:"inventario_sellos_now", nombre:"Inspección de Inventario de Sellos", puntosPorItem:25, empresas:["Now Logistics"], checklist: CHECKLIST_INVENTARIO_SELLOS, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No" };
+
+const CHECKLIST_PLANTAS_COMPRESORES = [
+    {id:1, nombre:"¿La planta eléctrica y/o compresor se encuentra libre de fugas de combustible, aceite o aire?"},
+    {id:2, nombre:"¿El panel de control indica parámetros normales de operación?"},
+    {id:3, nombre:"¿El área de ubicación está limpia, ordenada y libre de obstrucciones?"},
+    {id:4, nombre:"¿Existen protecciones y señalización adecuadas en el área de equipos?"},
+    {id:5, nombre:"¿Se cuenta con un registro actualizado de horas de uso y mantenimientos realizados?"}
+];
+const TIPO_PLANTAS_COMPRESORES = { id:"plantas_electricas_compresores", nombre:"Inspección de Plantas Eléctricas y Compresores", puntosPorItem:20, empresas:["Global Technology Group","Now Logistics"], checklist: CHECKLIST_PLANTAS_COMPRESORES, integrado:true, tieneCondicion:false, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No" };
+
+const CHECKLIST_MONTACARGAS = [
+    {id:1, nombre:"¿Las llantas están en buen estado?"},
+    {id:2, nombre:"¿Las horquillas (chanclas, cuchillas) están en buen estado?"},
+    {id:3, nombre:"¿Las cadenas están en buen estado?"},
+    {id:4, nombre:"¿El sistema hidráulico de elevación e inclinación están en buen estado?"},
+    {id:5, nombre:"¿Los cables de soporte de inclinación están en buen estado?"},
+    {id:6, nombre:"¿La torre de elevación funciona y está en buen estado?"},
+    {id:7, nombre:"¿El tanque de combustible está en buen estado?"},
+    {id:8, nombre:"¿La batería está completa de agua, limpia, cargada y en buen estado?"},
+    {id:9, nombre:"¿El nivel de aceite hidráulico está completo?"},
+    {id:10, nombre:"¿El nivel de aceite de transmisión está completo?"},
+    {id:11, nombre:"¿El nivel de aceite del motor está completo?"},
+    {id:12, nombre:"¿El nivel de líquido de frenos está completo?"},
+    {id:13, nombre:"¿El nivel de agua del radiador está completo y en buen estado?"},
+    {id:14, nombre:"¿El sistema de frenos de pedal se encuentra en buen estado?"},
+    {id:15, nombre:"¿El sistema de frenos de emergencia se encuentra en buen estado?"},
+    {id:16, nombre:"¿Las luces de dirección funcionan y están en buen estado?"},
+    {id:17, nombre:"¿Las luces frontales y traseras funcionan y están en buen estado?"},
+    {id:18, nombre:"¿Las luces intermitentes funcionan y están en buen estado?"},
+    {id:19, nombre:"¿La luz de centella funciona y está en buen estado?"},
+    {id:20, nombre:"¿Las bocinas funcionan y están en buen estado?"},
+    {id:21, nombre:"¿La alarma (sonido) de reversa funciona y está en buen estado?"},
+    {id:22, nombre:"¿El extintor está cargado y en buen estado?"},
+    {id:23, nombre:"¿El espejo retrovisor está en buen estado?"},
+    {id:24, nombre:"¿El asiento está en buen estado?"},
+    {id:25, nombre:"¿El cinturón de seguridad está en buen estado?"},
+    {id:26, nombre:"¿Los EPP (Casco, Chaleco, Bota) están en buen estado y los usa?"}
+];
+const TIPO_MONTACARGAS = {
+    id:"montacargas_elevadores", nombre:"Inspección de Montacargas y Elevadores", puntosPorItem:Number((100/26).toFixed(3)),
+    empresas:["Global Technology Group","Now Logistics"], checklist: CHECKLIST_MONTACARGAS, integrado:true,
+    tieneCondicion:false, tieneNA:true, etiquetaValoracionPositiva:"Sí", etiquetaValoracionNegativa:"No", etiquetaNA:"N/A",
+    campoAdicional: { key:"operador", label:"Operador del montacargas", opciones:[
+        "Henry Marcelino López", "Franklin Batista", "Adrián Ramón Martinez Pacheco", "Joseph Klaren Martínez Pérez",
+        "Wesley Ariel Tavarez Jackson", "Estebin Montero", "Jaime Ricardo Peralta García"
+    ]}
+};
+
 /* ==================== USUARIOS Y SESIÓN ====================
    ⚠️ Esto es un candado de acceso para el prototipo, NO seguridad real: al ser
    HTML/JS plano, cualquiera que abra "Ver código fuente" puede leer las
@@ -725,7 +884,10 @@ let inspeccionActual = null;
 let inspeccionEditandoId = null; // si no es null, "Guardar" actualiza esa inspección en vez de crear una nueva
 let chartTendencia = null, chartPorNave = null, chartPorEmpresa = null, chartRecurrentes = null, chartPorAnio = null, chartMensualPorAnio = null;
 
-const TIPOS_INTEGRADOS_BASE = [TIPO_SEG_FISICA, TIPO_GRAL_NOW, TIPO_GRAL_GTG, TIPO_GRAL_NTD, TIPO_MAQUINAS_GTG, TIPO_ELECTRICOS, TIPO_ESTACIONAMIENTOS, TIPO_QUIMICOS, TIPO_IDENTIFICACION, TIPO_CIBERSEGURIDAD, TIPO_COMPUTADORAS];
+const TIPOS_INTEGRADOS_BASE = [
+    TIPO_SEG_FISICA, TIPO_GRAL_NOW, TIPO_GRAL_GTG, TIPO_GRAL_NTD, TIPO_MAQUINAS_GTG, TIPO_ELECTRICOS, TIPO_ESTACIONAMIENTOS, TIPO_QUIMICOS, TIPO_IDENTIFICACION, TIPO_CIBERSEGURIDAD, TIPO_COMPUTADORAS,
+    TIPO_BOTIQUIN, TIPO_EXTINTORES, TIPO_ANALISIS_AGUA, TIPO_LLAVES, TIPO_LIBRO_VISITA, TIPO_PIZARRAS, TIPO_EVACUACION_NTD, TIPO_EVACUACION_GTG, TIPO_EVACUACION_NOW, TIPO_SEGUIMIENTO_RUTAS, TIPO_INVENTARIO_SELLOS, TIPO_PLANTAS_COMPRESORES, TIPO_MONTACARGAS
+];
 
 function todosLosTipos() {
     let integradosConOverride = TIPOS_INTEGRADOS_BASE.map(t => overridesTipos[t.id] ? Object.assign({}, t, overridesTipos[t.id], { integrado:true, id:t.id }) : t);
@@ -1144,6 +1306,7 @@ function iniciarNuevaInspeccion(empresa, tipoId, insertarFilaVacia) {
     };
     if (tipo.modo === "muestreo") inspeccionActual.filas = [];
     else { inspeccionActual.items = {}; tipo.checklist.forEach(it => { inspeccionActual.items[it.id] = { condicion:null, valoracion:null, especifique:"" }; }); }
+    inspeccionActual.campoAdicional = "";
 
     document.getElementById("nuevaTituloInspeccion").innerText = "📋 " + tipo.nombre;
     document.getElementById("nuevaSubtituloInspeccion").innerText = tipo.modo === "muestreo"
@@ -1162,6 +1325,15 @@ function iniciarNuevaInspeccion(empresa, tipoId, insertarFilaVacia) {
     document.getElementById("cardChecklistFijo").style.display = tipo.modo === "muestreo" ? "none" : "block";
     document.getElementById("cardMuestreo").style.display = tipo.modo === "muestreo" ? "block" : "none";
 
+    if (tipo.campoAdicional) {
+        document.getElementById("campoAdicionalWrap").style.display = "block";
+        document.getElementById("campoAdicionalLabel").innerText = tipo.campoAdicional.label;
+        document.getElementById("campoAdicionalSelect").innerHTML = `<option value="">— Selecciona —</option>` + tipo.campoAdicional.opciones.map(o => `<option value="${o}">${o}</option>`).join("");
+        document.getElementById("campoAdicionalSelect").value = "";
+    } else {
+        document.getElementById("campoAdicionalWrap").style.display = "none";
+    }
+
     if (tipo.modo === "muestreo") {
         renderCabeceraMuestreo(tipo);
         if (insertarFilaVacia !== false) agregarFilaMuestreo();
@@ -1170,6 +1342,10 @@ function iniciarNuevaInspeccion(empresa, tipoId, insertarFilaVacia) {
         renderItemsFormulario(tipo);
     }
     actualizarPuntajeVivo();
+}
+
+function actualizarCampoAdicional(valor) {
+    inspeccionActual.campoAdicional = valor;
 }
 
 function renderListaNaves() {
@@ -1183,6 +1359,7 @@ function renderItemsFormulario(tipo) {
     let etiquetaNeg = tipo.etiquetaValoracionNegativa || "Corregir";
     let etiquetaCondPos = tipo.etiquetaCondicionPositiva || "Adecuado";
     let etiquetaCondNeg = tipo.etiquetaCondicionNegativa || "Mejorar";
+    let etiquetaNA = tipo.etiquetaNA || "N/A";
     let seccionActual = null;
 
     cont.innerHTML = tipo.checklist.map(it => {
@@ -1200,10 +1377,12 @@ function renderItemsFormulario(tipo) {
                     ${tipo.tieneCondicion ? `<div class="btn-group condicion" data-item="${it.id}">
                         <button type="button" data-val="adecuado" onclick="marcarCondicion(${it.id},'adecuado',this)">${etiquetaCondPos}</button>
                         <button type="button" data-val="mejorar" onclick="marcarCondicion(${it.id},'mejorar',this)">${etiquetaCondNeg}</button>
+                        ${tipo.tieneNA ? `<button type="button" data-val="na" onclick="marcarCondicion(${it.id},'na',this)">${etiquetaNA}</button>` : ""}
                     </div>` : ""}
                     <div class="btn-group valoracion" data-item="${it.id}">
                         <button type="button" data-val="ok" onclick="marcarValoracion(${it.id},'ok',this)">✓ ${etiquetaPos}</button>
                         <button type="button" data-val="corregir" onclick="marcarValoracion(${it.id},'corregir',this)">✕ ${etiquetaNeg}</button>
+                        ${tipo.tieneNA ? `<button type="button" data-val="na" onclick="marcarValoracion(${it.id},'na',this)">${etiquetaNA}</button>` : ""}
                     </div>
                 </div>
                 <input class="item-especifique" oninput="actualizarEspecifique(${it.id}, this.value)" placeholder="Especifique${it.pistaEspecifique ? " — " + it.pistaEspecifique : " (opcional)"}">
@@ -1312,19 +1491,21 @@ function calcularPuntaje(insp) {
     let tipo = tipoPorId(insp.tipoId);
     if (tipo.modo === "muestreo") return calcularPuntajeMuestreo(insp, tipo);
 
-    let ok = 0, corregir = 0, pendientes = 0;
+    let ok = 0, corregir = 0, pendientes = 0, na = 0;
     let itemsCorregir = [];
     tipo.checklist.forEach(it => {
         let v = insp.items[it.id];
         if (v.valoracion === "ok") ok++;
         else if (v.valoracion === "corregir") { corregir++; itemsCorregir.push({ nombre: it.nombre, especifique: v.especifique }); }
+        else if (v.valoracion === "na") na++;
         else pendientes++;
     });
-    let maxPuntaje = tipo.checklist.length * tipo.puntosPorItem;
+    let totalEvaluable = tipo.checklist.length - na;
+    let maxPuntaje = totalEvaluable * tipo.puntosPorItem;
     let puntaje = ok * tipo.puntosPorItem;
     let pct = maxPuntaje > 0 ? (puntaje / maxPuntaje) * 100 : 0;
     let nivel = pct >= 80 ? "Adecuado" : pct >= 61 ? "Medio" : "Bajo";
-    return { puntaje, maxPuntaje, pct, nivel, ok, corregir, pendientes, totalItems: tipo.checklist.length, itemsCorregir, esMuestreo:false };
+    return { puntaje, maxPuntaje, pct, nivel, ok, corregir, pendientes, na, totalItems: totalEvaluable, itemsCorregir, esMuestreo:false };
 }
 
 function calcularPuntajeMuestreo(insp, tipo) {
@@ -1388,11 +1569,17 @@ function guardarInspeccion() {
     inspeccionActual.lugarInicio = document.getElementById("fNuevaLugar").value.trim();
     inspeccionActual.observaciones = document.getElementById("fNuevaObservaciones").value.trim();
 
+    let tipo = tipoPorId(inspeccionActual.tipoId);
+
+    if (tipo.campoAdicional) {
+        inspeccionActual.campoAdicional = document.getElementById("campoAdicionalSelect").value;
+        if (!inspeccionActual.campoAdicional) { alert(`Selecciona: ${tipo.campoAdicional.label}`); return; }
+    }
+
     if (!inspeccionActual.nave) { alert("Indica la Nave / Empresa antes de guardar."); return; }
     if (!inspeccionActual.fecha) { alert("Indica la fecha de la inspección."); return; }
     if (!inspeccionActual.realizadoPor) { alert("Indica quién realizó la inspección."); return; }
 
-    let tipo = tipoPorId(inspeccionActual.tipoId);
     // El puntaje se calcula y se guarda "congelado" junto con el registro, para que si el
     // formulario cambia más adelante, las inspecciones viejas no cambien de puntaje solas.
     inspeccionActual.resumen = calcularPuntaje(inspeccionActual);
@@ -1441,6 +1628,15 @@ function editarInspeccion(id) {
     renderListaNaves();
     document.getElementById("cardChecklistFijo").style.display = tipo.modo === "muestreo" ? "none" : "block";
     document.getElementById("cardMuestreo").style.display = tipo.modo === "muestreo" ? "block" : "none";
+
+    if (tipo.campoAdicional) {
+        document.getElementById("campoAdicionalWrap").style.display = "block";
+        document.getElementById("campoAdicionalLabel").innerText = tipo.campoAdicional.label;
+        document.getElementById("campoAdicionalSelect").innerHTML = `<option value="">— Selecciona —</option>` + tipo.campoAdicional.opciones.map(o => `<option value="${o}">${o}</option>`).join("");
+        document.getElementById("campoAdicionalSelect").value = insp.campoAdicional || "";
+    } else {
+        document.getElementById("campoAdicionalWrap").style.display = "none";
+    }
 
     if (tipo.modo === "muestreo") {
         renderCabeceraMuestreo(tipo);
@@ -1511,7 +1707,7 @@ function verDetalleInspeccion(id) {
                 <div>
                     <h2 style="margin:0 0 4px 0; font-size:19px;">${tipo.nombre}</h2>
                     <div style="font-size:12.5px; color:var(--text-muted);">${insp.empresa}${tipo.documento ? " · Documento " + tipo.documento : ""} · ${insp.nave} · ${insp.fecha}${insp.horaInicio ? " · " + insp.horaInicio : ""}</div>
-                    <div style="font-size:12.5px; color:var(--text-muted);">Realizado por: ${insp.realizadoPor}${insp.lugarInicio ? " · Lugar inicio: " + insp.lugarInicio : ""}</div>
+                    <div style="font-size:12.5px; color:var(--text-muted);">Realizado por: ${insp.realizadoPor}${insp.lugarInicio ? " · Lugar inicio: " + insp.lugarInicio : ""}${tipo.campoAdicional && insp.campoAdicional ? " · " + tipo.campoAdicional.label + ": " + insp.campoAdicional : ""}</div>
                 </div>
                 <div class="gauge" style="--gauge-pct:${r.pct}; --gauge-color:${colorNivel(r.nivel)};"><span>${r.pct.toFixed(0)}%</span></div>
             </div>
