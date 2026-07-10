@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Inspecciones de Seguridad Física · Now Logistics</title>
+<title>Inspecciones de Notions Group</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -130,7 +130,7 @@ table.tabla-simple td { padding:8px 10px; border-bottom:1px solid var(--line); }
     <div class="topbar-left">
         <div class="topbar-logo">NL</div>
         <div>
-            <h1>Inspecciones de Seguridad</h1>
+            <h1>Inspecciones de Notions Group</h1>
             <div class="subtitle">Now Logistics · Prototipo — datos guardados solo en este navegador</div>
         </div>
     </div>
@@ -384,6 +384,12 @@ table.tabla-simple td { padding:8px 10px; border-bottom:1px solid var(--line); }
         <div class="card">
             <h3 style="margin-top:0; font-size:14px;">Catálogo actual</h3>
             <div id="listaTiposCatalogo"></div>
+        </div>
+
+        <div class="card" id="cardTiposOcultos" style="display:none;">
+            <h3 style="margin-top:0; font-size:14px;">Tipos ocultos (borrados del catálogo activo)</h3>
+            <p class="panel-desc" style="margin-top:0;">No aparecen para iniciar nuevas inspecciones, pero las inspecciones ya guardadas con ellos siguen en el historial.</p>
+            <div id="listaTiposOcultos"></div>
         </div>
     </div>
 
@@ -879,6 +885,7 @@ function exigirSuperAdmin(mensaje) {
 let inspecciones = JSON.parse(localStorage.getItem("insp_registros") || "[]");
 let tiposCustom = JSON.parse(localStorage.getItem("insp_tipos_custom") || "[]");
 let overridesTipos = JSON.parse(localStorage.getItem("insp_tipos_overrides") || "{}"); // ediciones del Super Admin a los tipos integrados (preguntas, puntuación, etc.)
+let tiposIntegradosOcultos = JSON.parse(localStorage.getItem("insp_tipos_ocultos") || "[]"); // ids de tipos incluidos que el Super Admin "borró" del catálogo activo
 let bitacora = JSON.parse(localStorage.getItem("insp_bitacora") || "[]");
 let inspeccionActual = null;
 let inspeccionEditandoId = null; // si no es null, "Guardar" actualiza esa inspección en vez de crear una nueva
@@ -893,6 +900,12 @@ function todosLosTipos() {
     let integradosConOverride = TIPOS_INTEGRADOS_BASE.map(t => overridesTipos[t.id] ? Object.assign({}, t, overridesTipos[t.id], { integrado:true, id:t.id }) : t);
     return [...integradosConOverride, ...tiposCustom];
 }
+// Para elegir/iniciar inspecciones solo deben verse los tipos NO ocultos. tipoPorId() sigue
+// resolviendo también los ocultos, porque inspecciones ya guardadas con ese tipo deben poder
+// seguir viéndose/editándose aunque el tipo se haya quitado del catálogo activo.
+function tiposVisibles() {
+    return todosLosTipos().filter(t => !tiposIntegradosOcultos.includes(t.id));
+}
 function tipoPorId(id) { return todosLosTipos().find(t => t.id === id); }
 
 function guardarEnStorage() {
@@ -903,6 +916,9 @@ function guardarTiposEnStorage() {
 }
 function guardarOverridesEnStorage() {
     localStorage.setItem("insp_tipos_overrides", JSON.stringify(overridesTipos));
+}
+function guardarOcultosEnStorage() {
+    localStorage.setItem("insp_tipos_ocultos", JSON.stringify(tiposIntegradosOcultos));
 }
 
 /* ---- Identidad de quien usa la app ahora mismo (para poder trazar quién hizo qué) ---- */
@@ -958,7 +974,7 @@ function renderInicio() {
 
     let resumen = document.getElementById("resumenTiposPorEmpresa");
     resumen.innerHTML = EMPRESAS.map(emp => {
-        let tipos = todosLosTipos().filter(t => t.empresas.includes(emp));
+        let tipos = tiposVisibles().filter(t => t.empresas.includes(emp));
         return `<div class="card"><h3 style="margin-top:0; font-size:14px;">${emp}</h3>
             ${tipos.length === 0
                 ? `<p style="font-size:13px; color:var(--text-muted);">Todavía no hay inspecciones cargadas para esta empresa. Agrégalas en "⚙️ Tipos de Inspección".</p>`
@@ -971,7 +987,7 @@ function poblarSelectorTipoPorEmpresa() {
     let empresa = document.getElementById("fInicioEmpresa").value;
     let selTipo = document.getElementById("fInicioTipo");
     if (!empresa) { selTipo.innerHTML = `<option value="">Primero elige una empresa</option>`; return; }
-    let tipos = todosLosTipos().filter(t => t.empresas.includes(empresa));
+    let tipos = tiposVisibles().filter(t => t.empresas.includes(empresa));
     if (tipos.length === 0) { selTipo.innerHTML = `<option value="">Sin inspecciones cargadas para esta empresa</option>`; return; }
     selTipo.innerHTML = `<option value="">Selecciona la inspección...</option>` + tipos.map(t => `<option value="${t.id}">${t.nombre}${t.documento ? " (" + t.documento + ")" : ""}</option>`).join("");
 }
@@ -1091,7 +1107,7 @@ function renderCatalogoTipos() {
     cont.innerHTML = EMPRESAS.map(e => `<label style="font-size:13px;"><input type="checkbox" class="chk-empresa-tipo" value="${e}"> ${e}</label>`).join("");
 
     let lista = document.getElementById("listaTiposCatalogo");
-    lista.innerHTML = todosLosTipos().map(t => {
+    lista.innerHTML = tiposVisibles().map(t => {
         let detalle = t.modo === "muestreo"
             ? `${t.columnasEvaluacion.length} columna(s) de evaluación — filas dinámicas`
             : `${t.checklist.length} elementos · ${t.puntosPorItem} pts c/u · ${t.etiquetaValoracionPositiva || "Ok"}/${t.etiquetaValoracionNegativa || "Corregir"}${t.tieneCondicion ? ` · con Condición (${t.etiquetaCondicionPositiva}/${t.etiquetaCondicionNegativa})` : ""}`;
@@ -1105,13 +1121,28 @@ function renderCatalogoTipos() {
             <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
                 ${t.integrado ? `<span class="badge-nivel ${tieneOverride ? "badge-medio" : "badge-adecuado"}">${tieneOverride ? "Personalizada" : "Incluida"}</span>` : ""}
                 <button class="btn-chico" onclick="editarTipo('${t.id}')">Editar</button>
+                ${t.integrado && tieneOverride ? `<button class="btn-chico" onclick="restablecerTipoIntegrado('${t.id}')">Restablecer original</button>` : ""}
                 ${t.integrado
-                    ? (tieneOverride ? `<button class="btn-chico rojo" onclick="restablecerTipoIntegrado('${t.id}')">Restablecer original</button>` : "")
+                    ? `<button class="btn-chico rojo" onclick="eliminarTipoIntegrado('${t.id}')">Borrar</button>`
                     : `<button class="btn-chico rojo" onclick="eliminarTipoCustom('${t.id}')">Eliminar</button>`}
             </div>
         </div>
     `;
     }).join("");
+
+    let contOcultos = document.getElementById("listaTiposOcultos");
+    let ocultos = TIPOS_INTEGRADOS_BASE.filter(t => tiposIntegradosOcultos.includes(t.id));
+    document.getElementById("cardTiposOcultos").style.display = ocultos.length ? "block" : "none";
+    if (contOcultos) {
+        contOcultos.innerHTML = ocultos.map(t => `
+        <div class="item-row" style="grid-template-columns:1fr auto;">
+            <div>
+                <div class="item-nombre">${t.nombre}</div>
+                <div style="font-size:12.5px; color:var(--text-muted);">${t.empresas.join(", ")}</div>
+            </div>
+            <button class="btn-chico" onclick="restaurarTipoIntegrado('${t.id}')">↩️ Restaurar</button>
+        </div>`).join("");
+    }
 
     cambiarModoConstructorTipo();
     cambiarPresetEtiquetas();
@@ -1293,6 +1324,26 @@ function restablecerTipoIntegrado(id) {
     delete overridesTipos[id];
     guardarOverridesEnStorage();
     registrarBitacora("Restablecer tipo integrado", `"${nombre}" vuelve a su versión original`);
+    renderCatalogoTipos();
+}
+
+function eliminarTipoIntegrado(id) {
+    if (!exigirSuperAdmin("Solo el Super Admin puede eliminar tipos de inspección.")) return;
+    let tipo = tipoPorId(id);
+    if (!tipo) return;
+    if (!confirm(`¿Quitar "${tipo.nombre}" del catálogo activo? Las inspecciones ya guardadas con este tipo NO se borran y siguen viéndose en el historial. Puedes restaurarlo cuando quieras desde "Tipos ocultos".`)) return;
+    tiposIntegradosOcultos.push(id);
+    guardarOcultosEnStorage();
+    registrarBitacora("Baja de tipo", `"${tipo.nombre}" quitado del catálogo activo`);
+    renderCatalogoTipos();
+}
+
+function restaurarTipoIntegrado(id) {
+    if (!exigirSuperAdmin("Solo el Super Admin puede restaurar tipos de inspección.")) return;
+    let tipo = TIPOS_INTEGRADOS_BASE.find(t => t.id === id);
+    tiposIntegradosOcultos = tiposIntegradosOcultos.filter(x => x !== id);
+    guardarOcultosEnStorage();
+    registrarBitacora("Restaurar tipo", `"${tipo ? tipo.nombre : id}" vuelve a aparecer en el catálogo`);
     renderCatalogoTipos();
 }
 
