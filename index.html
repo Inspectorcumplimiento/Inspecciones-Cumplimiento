@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inspecciones de Notions Group</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -131,7 +134,7 @@ table.tabla-simple td { padding:8px 10px; border-bottom:1px solid var(--line); }
         <div class="topbar-logo">NL</div>
         <div>
             <h1>Inspecciones de Notions Group</h1>
-            <div class="subtitle">Now Logistics · Prototipo — datos guardados solo en este navegador</div>
+            <div class="subtitle">Departamento de Cumplimiento Y MC · Prototipo — datos guardados solo en este navegador</div>
         </div>
     </div>
     <div id="topbarSesion" style="display:flex; align-items:center; gap:10px;"></div>
@@ -409,6 +412,18 @@ table.tabla-simple td { padding:8px 10px; border-bottom:1px solid var(--line); }
     <div id="panelHistorial" class="tab-panel">
         <h2 class="panel-title">🗂️ Historial de Inspecciones</h2>
         <p class="panel-desc">Todas las inspecciones guardadas, con su puntaje y nivel de cumplimiento.</p>
+        <div class="filtro-bar">
+            <label>Empresa:</label>
+            <select id="filtroHistorialEmpresa" onchange="renderHistorial()"><option value="todas">Todas las empresas</option></select>
+            <label>Inspección:</label>
+            <select id="filtroHistorialTipo" onchange="renderHistorial()"><option value="todos">Todos los tipos</option></select>
+            <label>Desde:</label>
+            <input type="date" id="filtroHistorialDesde" onchange="renderHistorial()">
+            <label>Hasta:</label>
+            <input type="date" id="filtroHistorialHasta" onchange="renderHistorial()">
+            <button class="btn-secundario" onclick="exportarHistorialExcel()">📊 Exportar a Excel</button>
+            <button class="btn-secundario" onclick="exportarHistorialPDF()">📄 Exportar a PDF</button>
+        </div>
         <div class="card" style="padding:0; overflow:auto;">
             <table class="tabla-simple">
                 <thead><tr><th>Fecha</th><th>Empresa</th><th>Inspección</th><th>Nave/Ubicación</th><th>Realizado por</th><th>Puntaje</th><th>Nivel</th><th>Acciones</th></tr></thead>
@@ -453,6 +468,27 @@ table.tabla-simple td { padding:8px 10px; border-bottom:1px solid var(--line); }
                         <thead><tr><th>Año</th><th>Inspecciones</th><th>Promedio</th><th>Nivel</th><th>Vs. año anterior</th></tr></thead>
                         <tbody id="tbodyComparativaAnio"></tbody>
                     </table>
+                </div>
+            </div>
+
+            <div class="chart-box">
+                <h3>Evolución de una inspección específica</h3>
+                <p class="panel-desc" style="margin-top:0;">Compara, inspección tras inspección, cómo ha ido un mismo tipo de inspección en una misma nave/ubicación.</p>
+                <div class="filtro-bar">
+                    <label>Inspección:</label>
+                    <select id="filtroEvolucionTipo" onchange="poblarNavesEvolucion(); renderEvolucionInspeccion();"><option value="">Selecciona un tipo...</option></select>
+                    <label>Nave / Ubicación:</label>
+                    <select id="filtroEvolucionNave" onchange="renderEvolucionInspeccion();"><option value="">Selecciona un tipo primero</option></select>
+                </div>
+                <div id="evolucionVacio" style="color:var(--text-muted); font-size:13px; padding:8px 0;">Elige un tipo y una nave/ubicación para ver su evolución.</div>
+                <div id="evolucionContenido" style="display:none;">
+                    <div style="position:relative; height:260px;"><canvas id="chartEvolucion"></canvas></div>
+                    <div style="overflow:auto; margin-top:12px;">
+                        <table class="tabla-simple">
+                            <thead><tr><th>Fecha</th><th>Puntaje</th><th>Nivel</th><th>Vs. anterior</th><th>Realizado por</th><th></th></tr></thead>
+                            <tbody id="tbodyEvolucion"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -643,22 +679,21 @@ const TIPO_COMPUTADORAS = {
    Estos 11 tipos vienen del formulario consolidado que cubre las 3 empresas. Ese PDF no trae
    códigos de documento por sección, así que quedaron sin "documento" — se pueden agregar luego
    desde la pestaña "Tipos de Inspección".
-   Nota sobre "Botiquín": el formulario original pide cantidades exactas (ej. 0-10 unidades) para
-   varios insumos; el motor actual solo maneja Sí/No + un campo de texto libre, así que esos ítems
-   quedaron como "¿hay existencia de X?" con la cantidad exacta anotable en "Especifique". Avísame
-   si prefieres que cambie esto a un campo numérico real. */
+   "Botiquín": los 10 insumos con cantidad (curitas, gasas, etc.) usan un campo numérico real
+   (tipo:"numero" + max), no Sí/No. Un ítem cuenta como "Ok" si la cantidad ingresada es mayor a 0,
+   y como hallazgo si está en 0 — así el puntaje sigue funcionando igual que en el resto de tipos. */
 
 const CHECKLIST_BOTIQUIN = [
-    {id:1, nombre:"¿Hay existencia de Diclofenac en Gel?", pistaEspecifique:"Cantidad exacta (0-3)"},
-    {id:2, nombre:"¿Hay existencia de Agua oxigenada?", pistaEspecifique:"Cantidad exacta (0-3)"},
-    {id:3, nombre:"¿Hay existencia de Alcohol isopropílico?", pistaEspecifique:"Cantidad exacta (0-3)"},
-    {id:4, nombre:"¿Hay existencia de Bay rum?", pistaEspecifique:"Cantidad exacta (0-3)"},
-    {id:5, nombre:"¿Hay existencia de Jabón líquido?", pistaEspecifique:"Cantidad exacta (0-3)"},
-    {id:6, nombre:"¿Hay existencia de Nitrofurazona?", pistaEspecifique:"Cantidad exacta (0-2)"},
-    {id:7, nombre:"¿Hay existencia de Curitas?", pistaEspecifique:"Cantidad exacta (0-10)"},
-    {id:8, nombre:"¿Hay existencia de Depresores de lengua?", pistaEspecifique:"Cantidad exacta (0-10)"},
-    {id:9, nombre:"¿Hay existencia de Rolled gauze?", pistaEspecifique:"Cantidad exacta (0-10)"},
-    {id:10, nombre:"¿Hay existencia de Gasas estériles?", pistaEspecifique:"Cantidad exacta (0-10)"},
+    {id:1, nombre:"Diclofenac en Gel", tipo:"numero", max:3},
+    {id:2, nombre:"Agua oxigenada", tipo:"numero", max:3},
+    {id:3, nombre:"Alcohol isopropílico", tipo:"numero", max:3},
+    {id:4, nombre:"Bay rum", tipo:"numero", max:3},
+    {id:5, nombre:"Jabón líquido", tipo:"numero", max:3},
+    {id:6, nombre:"Nitrofurazona", tipo:"numero", max:2},
+    {id:7, nombre:"Curitas", tipo:"numero", max:10},
+    {id:8, nombre:"Depresores de lengua", tipo:"numero", max:10},
+    {id:9, nombre:"Rolled gauze", tipo:"numero", max:10},
+    {id:10, nombre:"Gasas estériles", tipo:"numero", max:10},
     {id:11, nombre:"¿Existe algodón en el área?"},
     {id:12, nombre:"¿Existe guantes esterilizados en el área?"},
     {id:13, nombre:"¿Existe loción para ojos (gotas) en el área?"},
@@ -804,6 +839,7 @@ const USUARIOS = [
     { usuario:"joan",        nombre:"Joan Garcia",              password:"Joan2026*",   rol:"usuario" },
     { usuario:"jhoan",       nombre:"Jhoan Hilario",             password:"Jhoan2026*",  rol:"usuario" },
     { usuario:"victor",      nombre:"Victor Torres",             password:"Victor2026*", rol:"superadmin" },
+    { usuario:"auditor",     nombre:"Auditor/a",                 password:"Auditor2026*",rol:"auditor" },
     { usuario:"colaborador", nombre:"Colaborador / Pasante",     password:"Colab2026*",  rol:"usuario", generico:true }
 ];
 
@@ -856,11 +892,12 @@ function entrarAlApp() {
     document.getElementById("pantallaLogin").style.display = "none";
     document.getElementById("appContenido").style.display = "block";
     document.getElementById("topbarSesion").innerHTML = `
-        <span class="chip ${sesionActual.rol === "superadmin" ? "chip-admin" : ""}">👤 ${sesionActual.nombre}${sesionActual.rol === "superadmin" ? " · Super Admin" : ""}</span>
+        <span class="chip ${sesionActual.rol === "superadmin" ? "chip-admin" : ""}">👤 ${sesionActual.nombre}${sesionActual.rol === "superadmin" ? " · Super Admin" : sesionActual.rol === "auditor" ? " · Auditor/a (solo lectura)" : ""}</span>
         <button class="btn-chico" onclick="cerrarSesion()">Cerrar sesión</button>
     `;
     document.getElementById("tabBtnTipos").style.display = sesionActual.rol === "superadmin" ? "inline-block" : "none";
-    mostrarTab("inicio");
+    document.getElementById("tabBtnInicio").style.display = esAuditor() ? "none" : "inline-block";
+    mostrarTab(esAuditor() ? "historial" : "inicio");
 }
 
 function intentarSesionGuardada() {
@@ -875,10 +912,15 @@ function intentarSesionGuardada() {
 }
 
 function esSuperAdmin() { return !!(sesionActual && sesionActual.rol === "superadmin"); }
+function esAuditor() { return !!(sesionActual && sesionActual.rol === "auditor"); }
 function exigirSuperAdmin(mensaje) {
     if (esSuperAdmin()) return true;
     alert(mensaje || "Solo el Super Admin puede hacer esto.");
     return false;
+}
+function exigirNoAuditor(mensaje) {
+    if (esAuditor()) { alert(mensaje || "Tu usuario (Auditor/a) es de solo lectura y no puede hacer cambios."); return false; }
+    return true;
 }
 
 /* ==================== ESTADO ==================== */
@@ -889,7 +931,7 @@ let tiposIntegradosOcultos = JSON.parse(localStorage.getItem("insp_tipos_ocultos
 let bitacora = JSON.parse(localStorage.getItem("insp_bitacora") || "[]");
 let inspeccionActual = null;
 let inspeccionEditandoId = null; // si no es null, "Guardar" actualiza esa inspección en vez de crear una nueva
-let chartTendencia = null, chartPorNave = null, chartPorEmpresa = null, chartRecurrentes = null, chartPorAnio = null, chartMensualPorAnio = null;
+let chartTendencia = null, chartPorNave = null, chartPorEmpresa = null, chartRecurrentes = null, chartPorAnio = null, chartMensualPorAnio = null, chartEvolucion = null;
 
 const TIPOS_INTEGRADOS_BASE = [
     TIPO_SEG_FISICA, TIPO_GRAL_NOW, TIPO_GRAL_GTG, TIPO_GRAL_NTD, TIPO_MAQUINAS_GTG, TIPO_ELECTRICOS, TIPO_ESTACIONAMIENTOS, TIPO_QUIMICOS, TIPO_IDENTIFICACION, TIPO_CIBERSEGURIDAD, TIPO_COMPUTADORAS,
@@ -1356,7 +1398,7 @@ function iniciarNuevaInspeccion(empresa, tipoId, insertarFilaVacia) {
         horaInicio:"", lugarInicio:"", observaciones:""
     };
     if (tipo.modo === "muestreo") inspeccionActual.filas = [];
-    else { inspeccionActual.items = {}; tipo.checklist.forEach(it => { inspeccionActual.items[it.id] = { condicion:null, valoracion:null, especifique:"" }; }); }
+    else { inspeccionActual.items = {}; tipo.checklist.forEach(it => { inspeccionActual.items[it.id] = { condicion:null, valoracion:null, especifique:"", cantidad:null }; }); }
     inspeccionActual.campoAdicional = "";
 
     document.getElementById("nuevaTituloInspeccion").innerText = "📋 " + tipo.nombre;
@@ -1425,6 +1467,10 @@ function renderItemsFormulario(tipo) {
             <div>
                 <div class="item-nombre">${it.nombre}</div>
                 <div class="item-controles">
+                    ${it.tipo === "numero" ? `
+                        <input type="number" min="0" max="${it.max}" class="item-cantidad" id="cantidad_${it.id}" style="width:64px; padding:6px 8px; border:1.5px solid var(--line); border-radius:8px; font-size:13.5px;" placeholder="0" oninput="marcarCantidad(${it.id}, this.value, ${it.max})">
+                        <span style="font-size:12px; color:var(--text-muted); margin-left:6px;">de ${it.max} máx.</span>
+                    ` : `
                     ${tipo.tieneCondicion ? `<div class="btn-group condicion" data-item="${it.id}">
                         <button type="button" data-val="adecuado" onclick="marcarCondicion(${it.id},'adecuado',this)">${etiquetaCondPos}</button>
                         <button type="button" data-val="mejorar" onclick="marcarCondicion(${it.id},'mejorar',this)">${etiquetaCondNeg}</button>
@@ -1435,8 +1481,9 @@ function renderItemsFormulario(tipo) {
                         <button type="button" data-val="corregir" onclick="marcarValoracion(${it.id},'corregir',this)">✕ ${etiquetaNeg}</button>
                         ${tipo.tieneNA ? `<button type="button" data-val="na" onclick="marcarValoracion(${it.id},'na',this)">${etiquetaNA}</button>` : ""}
                     </div>
+                    `}
                 </div>
-                <input class="item-especifique" oninput="actualizarEspecifique(${it.id}, this.value)" placeholder="Especifique${it.pistaEspecifique ? " — " + it.pistaEspecifique : " (opcional)"}">
+                <input class="item-especifique" data-item="${it.id}" oninput="actualizarEspecifique(${it.id}, this.value)" placeholder="Especifique${it.pistaEspecifique ? " — " + it.pistaEspecifique : " (opcional)"}">
             </div>
         </div>`;
     }).join("");
@@ -1449,11 +1496,16 @@ function aplicarEstadoAlFormulario(tipo) {
     tipo.checklist.forEach(it => {
         let v = inspeccionActual.items[it.id];
         if (!v) return;
-        let filaCondicion = document.querySelector(`.btn-group.condicion[data-item="${it.id}"]`);
-        let filaValoracion = document.querySelector(`.btn-group.valoracion[data-item="${it.id}"]`);
-        if (v.condicion && filaCondicion) filaCondicion.querySelector(`button[data-val="${v.condicion}"]`)?.classList.add("activo");
-        if (v.valoracion && filaValoracion) filaValoracion.querySelector(`button[data-val="${v.valoracion}"]`)?.classList.add("activo");
-        let inputEspecifique = (filaValoracion || filaCondicion)?.parentElement?.querySelector(".item-especifique");
+        if (it.tipo === "numero") {
+            let inputCantidad = document.getElementById(`cantidad_${it.id}`);
+            if (inputCantidad && v.cantidad != null) inputCantidad.value = v.cantidad;
+        } else {
+            let filaCondicion = document.querySelector(`.btn-group.condicion[data-item="${it.id}"]`);
+            let filaValoracion = document.querySelector(`.btn-group.valoracion[data-item="${it.id}"]`);
+            if (v.condicion && filaCondicion) filaCondicion.querySelector(`button[data-val="${v.condicion}"]`)?.classList.add("activo");
+            if (v.valoracion && filaValoracion) filaValoracion.querySelector(`button[data-val="${v.valoracion}"]`)?.classList.add("activo");
+        }
+        let inputEspecifique = document.querySelector(`.item-especifique[data-item="${it.id}"]`);
         if (inputEspecifique && v.especifique) inputEspecifique.value = v.especifique;
     });
 }
@@ -1467,6 +1519,12 @@ function marcarValoracion(id, valor, btn) {
     inspeccionActual.items[id].valoracion = valor;
     btn.parentElement.querySelectorAll("button").forEach(b => b.classList.remove("activo"));
     btn.classList.add("activo");
+    actualizarPuntajeVivo();
+}
+function marcarCantidad(id, valor, max) {
+    let n = valor === "" ? null : Math.max(0, Math.min(max, parseInt(valor, 10) || 0));
+    inspeccionActual.items[id].cantidad = n;
+    inspeccionActual.items[id].valoracion = n === null ? null : (n > 0 ? "ok" : "corregir");
     actualizarPuntajeVivo();
 }
 function actualizarEspecifique(id, valor) {
@@ -1613,6 +1671,7 @@ function actualizarPuntajeVivo() {
 }
 
 function guardarInspeccion() {
+    if (!exigirNoAuditor("Tu usuario (Auditor/a) es de solo lectura y no puede guardar inspecciones.")) return;
     inspeccionActual.nave = document.getElementById("fNuevaNave").value.trim();
     inspeccionActual.realizadoPor = document.getElementById("fNuevaRealizadoPor").value.trim();
     inspeccionActual.fecha = document.getElementById("fNuevaFecha").value;
@@ -1659,6 +1718,7 @@ function guardarInspeccion() {
 }
 
 function editarInspeccion(id) {
+    if (!exigirNoAuditor("Tu usuario (Auditor/a) es de solo lectura y no puede editar inspecciones.")) return;
     let insp = inspecciones.find(i => i.id === id);
     if (!insp) return;
     let tipo = tipoPorId(insp.tipoId);
@@ -1700,13 +1760,38 @@ function editarInspeccion(id) {
 }
 
 /* ==================== HISTORIAL ==================== */
+function poblarFiltrosHistorial() {
+    let selEmp = document.getElementById("filtroHistorialEmpresa");
+    if (selEmp.options.length <= 1) {
+        selEmp.innerHTML = `<option value="todas">Todas las empresas</option>` + EMPRESAS.map(e => `<option value="${e}">${e}</option>`).join("");
+    }
+    let selTipo = document.getElementById("filtroHistorialTipo");
+    let valorPrevio = selTipo.value || "todos";
+    selTipo.innerHTML = `<option value="todos">Todos los tipos</option>` + todosLosTipos().map(t => `<option value="${t.id}">${t.nombre}${t.documento ? " (" + t.documento + ")" : ""}</option>`).join("");
+    if ([...selTipo.options].some(o => o.value === valorPrevio)) selTipo.value = valorPrevio;
+}
+
+function inspeccionesFiltradasHistorial() {
+    let filtroEmp = document.getElementById("filtroHistorialEmpresa").value;
+    let filtroTipo = document.getElementById("filtroHistorialTipo").value;
+    let desde = document.getElementById("filtroHistorialDesde").value;
+    let hasta = document.getElementById("filtroHistorialHasta").value;
+    return inspecciones.filter(i =>
+        (filtroEmp === "todas" || i.empresa === filtroEmp) &&
+        (filtroTipo === "todos" || i.tipoId === filtroTipo) &&
+        (!desde || (i.fecha || "") >= desde) &&
+        (!hasta || (i.fecha || "") <= hasta)
+    ).slice().sort((a,b) => (b.fecha||"").localeCompare(a.fecha||""));
+}
+
 function renderHistorial() {
+    poblarFiltrosHistorial();
     let tbody = document.getElementById("tbodyHistorial");
-    if (inspecciones.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:24px;">Todavía no hay inspecciones guardadas.</td></tr>`;
+    let ordenadas = inspeccionesFiltradasHistorial();
+    if (ordenadas.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:24px;">${inspecciones.length === 0 ? "Todavía no hay inspecciones guardadas." : "Ninguna inspección coincide con los filtros."}</td></tr>`;
         return;
     }
-    let ordenadas = inspecciones.slice().sort((a,b) => (b.fecha||"").localeCompare(a.fecha||""));
     tbody.innerHTML = ordenadas.map(insp => {
         let tipo = tipoPorId(insp.tipoId);
         return `
@@ -1720,15 +1805,90 @@ function renderHistorial() {
             <td><span class="badge-nivel ${claseNivel(insp.resumen.nivel)}">${insp.resumen.nivel}</span></td>
             <td>
                 <button class="btn-chico" onclick="verDetalleInspeccion('${insp.id}')">Ver</button>
-                <button class="btn-chico" onclick="editarInspeccion('${insp.id}')">Editar</button>
-                <button class="btn-chico rojo" onclick="eliminarInspeccion('${insp.id}')">Eliminar</button>
+                ${esAuditor() ? "" : `<button class="btn-chico" onclick="editarInspeccion('${insp.id}')">Editar</button>
+                <button class="btn-chico rojo" onclick="eliminarInspeccion('${insp.id}')">Eliminar</button>`}
             </td>
         </tr>
     `;
     }).join("");
 }
 
+function exportarHistorialExcel() {
+    let filas = inspeccionesFiltradasHistorial();
+    if (filas.length === 0) { alert("No hay inspecciones para exportar con los filtros actuales."); return; }
+    let datos = filas.map(insp => {
+        let tipo = tipoPorId(insp.tipoId);
+        return {
+            "Fecha": insp.fecha || "",
+            "Empresa": insp.empresa || "",
+            "Inspección": tipo ? tipo.nombre : insp.tipoId,
+            "Documento": tipo && tipo.documento ? tipo.documento : "",
+            "Nave / Ubicación": insp.nave || "",
+            "Realizado por": insp.realizadoPor || "",
+            "Puntaje %": Number(insp.resumen.pct.toFixed(1)),
+            "Nivel": insp.resumen.nivel,
+            "Ok": insp.resumen.ok,
+            "A corregir": insp.resumen.corregir,
+            "Observaciones": insp.observaciones || ""
+        };
+    });
+    let hoja = XLSX.utils.json_to_sheet(datos);
+    hoja["!cols"] = [{wch:12},{wch:22},{wch:34},{wch:14},{wch:22},{wch:20},{wch:10},{wch:10},{wch:6},{wch:10},{wch:40}];
+    let libro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(libro, hoja, "Historial");
+    XLSX.writeFile(libro, `Historial_Inspecciones_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function exportarHistorialPDF() {
+    let filas = inspeccionesFiltradasHistorial();
+    if (filas.length === 0) { alert("No hay inspecciones para exportar con los filtros actuales."); return; }
+    let { jsPDF } = window.jspdf;
+    let doc = new jsPDF({ orientation: "landscape" });
+
+    doc.setFillColor(53, 82, 214);
+    doc.rect(0, 0, doc.internal.pageSize.getWidth(), 22, "F");
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(16);
+    doc.text("Historial de Inspecciones — Notions Group", 14, 14);
+    doc.setFontSize(9);
+    doc.setTextColor(230,230,255);
+    doc.text(`Generado el ${new Date().toLocaleDateString("es-DO")} · ${filas.length} inspección(es)`, 14, 19);
+
+    let filtroEmp = document.getElementById("filtroHistorialEmpresa").value;
+    let filtroTipo = document.getElementById("filtroHistorialTipo").selectedOptions[0].text;
+    doc.setTextColor(90,90,90);
+    doc.setFontSize(9);
+    doc.text(`Filtros — Empresa: ${filtroEmp === "todas" ? "Todas" : filtroEmp} · Tipo: ${filtroTipo}`, 14, 28);
+
+    let filasTabla = filas.map(insp => {
+        let tipo = tipoPorId(insp.tipoId);
+        return [insp.fecha || "—", insp.empresa || "—", tipo ? tipo.nombre : "—", insp.nave || "—", insp.realizadoPor || "—", insp.resumen.pct.toFixed(0) + "%", insp.resumen.nivel];
+    });
+
+    doc.autoTable({
+        head: [["Fecha","Empresa","Inspección","Nave/Ubicación","Realizado por","Puntaje","Nivel"]],
+        body: filasTabla,
+        startY: 33,
+        theme: "striped",
+        headStyles: { fillColor: [53, 82, 214], textColor: 255, fontStyle: "bold" },
+        alternateRowStyles: { fillColor: [245, 246, 250] },
+        styles: { fontSize: 8.5, cellPadding: 3 },
+        didParseCell: function(data) {
+            if (data.section === "body" && data.column.index === 6) {
+                let nivel = data.cell.raw;
+                if (nivel === "Adecuado") data.cell.styles.textColor = [28,154,108];
+                else if (nivel === "Medio") data.cell.styles.textColor = [221,154,46];
+                else data.cell.styles.textColor = [214,72,63];
+                data.cell.styles.fontStyle = "bold";
+            }
+        }
+    });
+
+    doc.save(`Historial_Inspecciones_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
 function eliminarInspeccion(id) {
+    if (!exigirNoAuditor("Tu usuario (Auditor/a) es de solo lectura y no puede eliminar inspecciones.")) return;
     let insp = inspecciones.find(i => i.id === id);
     if (!insp) return;
     if (!confirm("¿Eliminar esta inspección? No se puede deshacer.")) return;
@@ -1950,6 +2110,73 @@ function renderComparativa() {
             <td>${prom.toFixed(0)}%</td>
             <td><span class="badge-nivel ${claseNivel(nivel)}">${nivel}</span></td>
             <td>${deltaFila == null ? "—" : `<span class="${deltaFila >= 0 ? "kpi-trend-up" : "kpi-trend-down"}">${deltaFila >= 0 ? "▲ +" : "▼ "}${deltaFila.toFixed(1)} pts</span>`}</td>
+        </tr>`;
+    }).join("");
+
+    poblarFiltrosEvolucion();
+}
+
+function poblarFiltrosEvolucion() {
+    let selTipo = document.getElementById("filtroEvolucionTipo");
+    if (selTipo.options.length <= 1) {
+        selTipo.innerHTML = `<option value="">Selecciona un tipo...</option>` + todosLosTipos().map(t => `<option value="${t.id}">${t.nombre}${t.documento ? " (" + t.documento + ")" : ""}</option>`).join("");
+    }
+}
+
+function poblarNavesEvolucion() {
+    let tipoId = document.getElementById("filtroEvolucionTipo").value;
+    let selNave = document.getElementById("filtroEvolucionNave");
+    if (!tipoId) { selNave.innerHTML = `<option value="">Selecciona un tipo primero</option>`; renderEvolucionInspeccion(); return; }
+    let naves = [...new Set(inspecciones.filter(i => i.tipoId === tipoId).map(i => i.nave).filter(Boolean))].sort();
+    selNave.innerHTML = naves.length
+        ? `<option value="">Selecciona...</option>` + naves.map(n => `<option value="${n}">${n}</option>`).join("")
+        : `<option value="">Sin registros para este tipo</option>`;
+}
+
+function renderEvolucionInspeccion() {
+    let tipoId = document.getElementById("filtroEvolucionTipo").value;
+    let nave = document.getElementById("filtroEvolucionNave").value;
+    let vacio = document.getElementById("evolucionVacio");
+    let contenido = document.getElementById("evolucionContenido");
+
+    if (!tipoId || !nave) {
+        vacio.style.display = "block";
+        vacio.innerText = "Elige un tipo y una nave/ubicación para ver su evolución.";
+        contenido.style.display = "none";
+        return;
+    }
+
+    let filtradas = inspecciones.filter(i => i.tipoId === tipoId && i.nave === nave).sort((a,b) => (a.fecha||"").localeCompare(b.fecha||""));
+    if (filtradas.length === 0) {
+        vacio.style.display = "block";
+        vacio.innerText = "No hay inspecciones registradas para esa combinación.";
+        contenido.style.display = "none";
+        return;
+    }
+    vacio.style.display = "none";
+    contenido.style.display = "block";
+
+    let ctx = document.getElementById("chartEvolucion");
+    if (chartEvolucion) chartEvolucion.destroy();
+    chartEvolucion = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: filtradas.map(i => i.fecha),
+            datasets: [{ label:"% de cumplimiento", data: filtradas.map(i => Number(i.resumen.pct.toFixed(1))), borderColor:"#3552D6", backgroundColor:"#3552D6", tension:0.3, pointRadius:4 }]
+        },
+        options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, max:100 } } }
+    });
+
+    let tbodyEv = document.getElementById("tbodyEvolucion");
+    tbodyEv.innerHTML = filtradas.map((insp, idx) => {
+        let deltaFila = idx > 0 ? insp.resumen.pct - filtradas[idx - 1].resumen.pct : null;
+        return `<tr>
+            <td>${insp.fecha}</td>
+            <td>${insp.resumen.pct.toFixed(0)}%</td>
+            <td><span class="badge-nivel ${claseNivel(insp.resumen.nivel)}">${insp.resumen.nivel}</span></td>
+            <td>${deltaFila == null ? "—" : `<span class="${deltaFila >= 0 ? "kpi-trend-up" : "kpi-trend-down"}">${deltaFila >= 0 ? "▲ +" : "▼ "}${deltaFila.toFixed(1)} pts</span>`}</td>
+            <td>${insp.realizadoPor || "—"}</td>
+            <td><button class="btn-chico" onclick="verDetalleInspeccion('${insp.id}')">Ver</button></td>
         </tr>`;
     }).join("");
 }
