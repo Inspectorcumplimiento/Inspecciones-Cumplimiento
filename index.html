@@ -8,6 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -52,6 +53,10 @@ body.tema-oscuro ::placeholder { color: var(--text-muted); }
 .avatar-grande { width:96px; height:96px; border-radius:50%; object-fit:cover; border:2px solid var(--line); display:block; }
 .tema-opcion { display:inline-flex; align-items:center; gap:6px; padding:10px 16px; border:1.5px solid var(--line); border-radius:10px; cursor:pointer; font-size:13px; font-weight:600; }
 .tema-opcion.activo { border-color:var(--accent-blue); background:rgba(53,82,214,.08); color:var(--accent-blue); }
+.sync-status { position:fixed; bottom:18px; right:18px; z-index:9999; padding:10px 16px; border-radius:10px; font-size:13px; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,.18); color:white; display:none; max-width:320px; }
+.sync-cargando { background:#3552D6; }
+.sync-ok { background:#1C9A6C; }
+.sync-error { background:#D6483F; }
 h1,h2,h3,h4 { font-family: var(--font-display); letter-spacing:-0.01em; }
 
 .topbar { background: var(--sidebar-bg); color:white; padding:16px 28px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; border-bottom:3px solid; border-image: linear-gradient(90deg, var(--accent-blue), var(--sec-red)) 1; }
@@ -166,6 +171,8 @@ table.tabla-simple td { padding:8px 10px; border-bottom:1px solid var(--line); }
 </div>
 
 <!-- ============ PANTALLA DE LOGIN ============ -->
+<div id="syncStatus" class="sync-status"></div>
+
 <div id="pantallaLogin" class="login-wrap">
     <div class="login-card">
         <h2>🔒 Iniciar sesión</h2>
@@ -181,7 +188,7 @@ table.tabla-simple td { padding:8px 10px; border-bottom:1px solid var(--line); }
         <label>Contraseña</label>
         <input id="loginPassword" type="password" onkeydown="if(event.key==='Enter') intentarLogin();">
         <div id="loginError" class="login-error"></div>
-        <button class="btn-primario" onclick="intentarLogin()">Entrar</button>
+        <button class="btn-primario" id="btnLogin" onclick="intentarLogin()">Entrar</button>
     </div>
 </div>
 
@@ -298,7 +305,7 @@ table.tabla-simple td { padding:8px 10px; border-bottom:1px solid var(--line); }
             <textarea id="fNuevaObservaciones" style="width:100%; min-height:80px; padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-family:var(--font-body); font-size:13.5px; resize:vertical;" placeholder="Contexto adicional, hallazgos relevantes, seguimiento acordado..."></textarea>
         </div>
 
-        <button class="btn-primario" onclick="guardarInspeccion()">💾 Guardar inspección</button>
+        <button class="btn-primario" id="btnGuardarInspeccion" onclick="guardarInspeccion()">💾 Guardar inspección</button>
     </div>
 
     <!-- ============ TIPOS DE INSPECCIÓN ============ -->
@@ -575,6 +582,31 @@ table.tabla-simple td { padding:8px 10px; border-bottom:1px solid var(--line); }
 </div>
 
 <script>
+/* ==================== SUPABASE ====================
+   Project ref: iqexkyensmkhftzpkrgk. Esta es la anon public key — está pensada para
+   vivir en código de cliente (no es secreta como la service_role). La seguridad real
+   la dan las políticas RLS de cada tabla en Supabase. */
+const SUPABASE_URL = "https://iqexkyensmkhftzpkrgk.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxZXhreWVuc21raGZ0enBrcmdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MDE2ODUsImV4cCI6MjA5OTI3NzY4NX0.zo7_oDAs3vKROj36BGIa_5Pux_7RLrFRbFrdELSzsAs";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ---- Indicador de sincronización: avisa mientras guarda, si quedó bien, o si algo falló ---- */
+let syncTimeoutId = null;
+function mostrarEstadoSync(mensaje, tipo) {
+    let el = document.getElementById("syncStatus");
+    if (!el) return;
+    clearTimeout(syncTimeoutId);
+    el.className = "sync-status sync-" + tipo;
+    el.innerText = (tipo === "cargando" ? "🔄 " : tipo === "ok" ? "☁️ " : "⚠️ ") + mensaje;
+    el.style.display = "block";
+    if (tipo !== "cargando") {
+        syncTimeoutId = setTimeout(() => { el.style.display = "none"; }, tipo === "error" ? 7000 : 2200);
+    }
+}
+window.addEventListener("offline", () => mostrarEstadoSync("Sin conexión a internet — lo que hagas ahora no se guardará hasta que vuelva la señal", "error"));
+window.addEventListener("online", () => mostrarEstadoSync("Conexión recuperada", "ok"));
+
+
 /* ==================== DATOS DEL FORMULARIO NOW-SGS-FRM-28 ====================
    Estructurado como "tipo de inspección" para que en el futuro se puedan agregar
    otros formularios (ej. inspección de incendios, de EPP, etc.) sin tocar esto. */
@@ -898,20 +930,19 @@ const TIPO_MONTACARGAS = {
 };
 
 /* ==================== USUARIOS Y SESIÓN ====================
-   ⚠️ Esto es un candado de acceso para el prototipo, NO seguridad real: al ser
-   HTML/JS plano, cualquiera que abra "Ver código fuente" puede leer las
-   contraseñas de aquí abajo. Cuando esto se conecte a Supabase, el login se
-   mueve al backend con contraseñas encriptadas de verdad.
-   Para cambiar una contraseña, edita el campo "password" de cada usuario. */
+   La contraseña real y el rol ahora viven en Supabase Auth (no aquí). Esta lista solo
+   sirve para pintar el dropdown de login y saber cuál usuario debe pedir "tu nombre"
+   (el genérico "colaborador"). Cada usuario debe existir en Supabase → Authentication →
+   Users, con email "usuario@notionsgroup.local" y user_metadata: {"nombre":"...","rol":"..."} */
 const USUARIOS = [
-    { usuario:"joan",        nombre:"Joan Garcia",              password:"Joan2026*",   rol:"usuario" },
-    { usuario:"jhoan",       nombre:"Jhoan Hilario",             password:"Jhoan2026*",  rol:"usuario" },
-    { usuario:"victor",      nombre:"Victor Torres",             password:"Victor2026*", rol:"superadmin" },
-    { usuario:"auditor",     nombre:"Auditor/a",                 password:"Auditor2026*",rol:"auditor" },
-    { usuario:"colaborador", nombre:"Colaborador / Pasante",     password:"Colab2026*",  rol:"usuario", generico:true }
+    { usuario:"joan",        nombre:"Joan Garcia" },
+    { usuario:"jhoan",       nombre:"Jhoan Hilario" },
+    { usuario:"victor",      nombre:"Victor Torres" },
+    { usuario:"auditor",     nombre:"Auditor/a" },
+    { usuario:"colaborador", nombre:"Colaborador / Pasante", generico:true }
 ];
 
-let sesionActual = null; // { usuario, nombre, rol, generico }
+let sesionActual = null; // { usuario, nombre, rol, authId }
 
 function onCambiarLoginUsuario() {
     let u = USUARIOS.find(x => x.usuario === document.getElementById("loginUsuario").value);
@@ -924,31 +955,40 @@ function mostrarErrorLogin(msg) {
     box.style.display = "block";
 }
 
-function intentarLogin() {
+async function intentarLogin() {
     let uId = document.getElementById("loginUsuario").value;
     let pass = document.getElementById("loginPassword").value;
     let u = USUARIOS.find(x => x.usuario === uId);
     document.getElementById("loginError").style.display = "none";
 
     if (!u) { mostrarErrorLogin("Selecciona tu usuario."); return; }
-    let passwordEfectiva = (perfiles[u.usuario] && perfiles[u.usuario].passwordOverride) || u.password;
-    if (passwordEfectiva !== pass) { mostrarErrorLogin("Contraseña incorrecta."); return; }
+    if (!pass) { mostrarErrorLogin("Escribe tu contraseña."); return; }
 
-    let nombreFinal = u.nombre;
+    let btnLogin = document.getElementById("btnLogin");
+    if (btnLogin) { btnLogin.disabled = true; btnLogin.innerText = "Entrando..."; }
+
+    let { data, error } = await sb.auth.signInWithPassword({ email: `${uId}@notionsgroup.local`, password: pass });
+
+    if (btnLogin) { btnLogin.disabled = false; btnLogin.innerText = "Entrar"; }
+
+    if (error) { mostrarErrorLogin("Usuario o contraseña incorrectos."); return; }
+
+    let meta = data.user.user_metadata || {};
+    let nombreFinal = meta.nombre || u.nombre;
     if (u.generico) {
         let nombreTecleado = document.getElementById("loginNombreGenerico").value.trim();
         if (!nombreTecleado) { mostrarErrorLogin("Escribe tu nombre para continuar."); return; }
         nombreFinal = nombreTecleado;
     }
 
-    sesionActual = { usuario: u.usuario, nombre: nombreFinal, rol: u.rol };
-    localStorage.setItem("insp_sesion", JSON.stringify(sesionActual));
+    sesionActual = { usuario: u.usuario, nombre: nombreFinal, rol: meta.rol || "usuario", authId: data.user.id };
+    await cargarDatosDesdeSupabase();
     entrarAlApp();
 }
 
-function cerrarSesion() {
+async function cerrarSesion() {
+    await sb.auth.signOut();
     sesionActual = null;
-    localStorage.removeItem("insp_sesion");
     document.getElementById("appContenido").style.display = "none";
     document.getElementById("pantallaLogin").style.display = "flex";
     document.getElementById("loginPassword").value = "";
@@ -972,13 +1012,18 @@ function entrarAlApp() {
     mostrarTab(esAuditor() ? "historial" : "inicio");
 }
 
-function intentarSesionGuardada() {
+async function intentarSesionGuardada() {
     let selUsuario = document.getElementById("loginUsuario");
     selUsuario.innerHTML = `<option value="">Selecciona tu usuario...</option>` + USUARIOS.map(u => `<option value="${u.usuario}">${u.nombre}</option>`).join("");
 
-    let guardada = JSON.parse(localStorage.getItem("insp_sesion") || "null");
-    if (guardada && USUARIOS.find(u => u.usuario === guardada.usuario)) {
-        sesionActual = guardada;
+    let { data } = await sb.auth.getSession();
+    if (data.session) {
+        let user = data.session.user;
+        let meta = user.user_metadata || {};
+        let uId = (user.email || "").split("@")[0];
+        let uConocido = USUARIOS.find(x => x.usuario === uId);
+        sesionActual = { usuario: uId, nombre: meta.nombre || (uConocido ? uConocido.nombre : uId), rol: meta.rol || "usuario", authId: user.id };
+        await cargarDatosDesdeSupabase();
         entrarAlApp();
     }
 }
@@ -996,12 +1041,14 @@ function exigirNoAuditor(mensaje) {
 }
 
 /* ==================== ESTADO ==================== */
-let inspecciones = JSON.parse(localStorage.getItem("insp_registros") || "[]");
-let tiposCustom = JSON.parse(localStorage.getItem("insp_tipos_custom") || "[]");
-let overridesTipos = JSON.parse(localStorage.getItem("insp_tipos_overrides") || "{}"); // ediciones del Super Admin a los tipos integrados (preguntas, puntuación, etc.)
-let tiposIntegradosOcultos = JSON.parse(localStorage.getItem("insp_tipos_ocultos") || "[]"); // ids de tipos incluidos que el Super Admin "borró" del catálogo activo
-let perfiles = JSON.parse(localStorage.getItem("insp_perfiles") || "{}"); // { usuario: { foto, passwordOverride, tema } } — solo vive en este navegador
-let bitacora = JSON.parse(localStorage.getItem("insp_bitacora") || "[]");
+// Ya no se inicializa desde localStorage: se llena de forma asíncrona con
+// cargarDatosDesdeSupabase() apenas el login es exitoso.
+let inspecciones = [];
+let tiposCustom = [];
+let overridesTipos = {}; // ediciones del Super Admin a los tipos integrados (preguntas, puntuación, etc.)
+let tiposIntegradosOcultos = []; // ids de tipos incluidos que el Super Admin "borró" del catálogo activo
+let perfiles = {}; // { usuario: { foto, tema } } — cargado desde la tabla "perfiles"
+let bitacora = [];
 let inspeccionActual = null;
 let inspeccionEditandoId = null; // si no es null, "Guardar" actualiza esa inspección en vez de crear una nueva
 let chartTendencia = null, chartPorNave = null, chartPorEmpresa = null, chartRecurrentes = null, chartPorAnio = null, chartMensualPorAnio = null, chartEvolucion = null;
@@ -1023,20 +1070,51 @@ function tiposVisibles() {
 }
 function tipoPorId(id) { return todosLosTipos().find(t => t.id === id); }
 
-function guardarEnStorage() {
-    localStorage.setItem("insp_registros", JSON.stringify(inspecciones));
+// -------- Carga inicial desde Supabase (reemplaza los antiguos *EnStorage al arrancar) --------
+function mapearInspeccionDesdeSupabase(row) {
+    return {
+        id: row.id, tipoId: row.tipo_id, empresa: row.empresa, nave: row.nave,
+        realizadoPor: row.realizado_por, fecha: row.fecha, horaInicio: row.hora_inicio,
+        lugarInicio: row.lugar_inicio, observaciones: row.observaciones,
+        campoAdicional: row.campo_adicional, items: row.items || null, filas: row.filas || null,
+        resumen: row.resumen, creadaEn: row.creado_en, creadoPor: row.creado_por
+    };
 }
-function guardarTiposEnStorage() {
-    localStorage.setItem("insp_tipos_custom", JSON.stringify(tiposCustom));
+
+async function cargarDatosDesdeSupabase() {
+    mostrarEstadoSync("Cargando tus datos desde la nube...", "cargando");
+    let [rInsp, rCustom, rOverr, rOcult, rBit, rPerfil] = await Promise.all([
+        sb.from("inspecciones").select("*").order("fecha", { ascending:false }),
+        sb.from("tipos_custom").select("*"),
+        sb.from("tipos_overrides").select("*"),
+        sb.from("tipos_ocultos").select("*"),
+        sb.from("bitacora").select("*").order("fecha", { ascending:false }).limit(500),
+        sb.from("perfiles").select("*").eq("usuario_id", sesionActual.authId).maybeSingle()
+    ]);
+
+    let huboError = [rInsp, rCustom, rOverr, rOcult, rBit].some(r => r.error);
+    [rInsp, rCustom, rOverr, rOcult, rBit].forEach(r => { if (r.error) console.error("Error cargando de Supabase:", r.error.message); });
+
+    inspecciones = (rInsp.data || []).map(mapearInspeccionDesdeSupabase);
+    tiposCustom = (rCustom.data || []).map(c => c.definicion);
+    overridesTipos = {};
+    (rOverr.data || []).forEach(o => { overridesTipos[o.tipo_id] = o.definicion; });
+    tiposIntegradosOcultos = (rOcult.data || []).map(o => o.tipo_id);
+    bitacora = (rBit.data || []).map(b => ({ fecha:b.fecha, usuario:b.usuario, accion:b.accion, detalle:b.detalle }));
+
+    perfiles = {};
+    if (rPerfil.data) perfiles[sesionActual.usuario] = { tema: rPerfil.data.tema, foto: rPerfil.data.foto_url };
+
+    mostrarEstadoSync(huboError ? "Hubo un problema cargando algunos datos — revisa tu conexión o el esquema de Supabase" : "Datos sincronizados", huboError ? "error" : "ok");
 }
-function guardarOverridesEnStorage() {
-    localStorage.setItem("insp_tipos_overrides", JSON.stringify(overridesTipos));
-}
-function guardarOcultosEnStorage() {
-    localStorage.setItem("insp_tipos_ocultos", JSON.stringify(tiposIntegradosOcultos));
-}
-function guardarPerfilesEnStorage() {
-    localStorage.setItem("insp_perfiles", JSON.stringify(perfiles));
+
+async function registrarBitacora(accion, detalle) {
+    let entrada = { fecha: new Date().toISOString(), usuario: sesionActual ? sesionActual.nombre : "—", accion, detalle };
+    bitacora.push(entrada);
+    let { error } = await sb.from("bitacora").insert({ usuario: entrada.usuario, accion, detalle, fecha: entrada.fecha });
+    if (error) { console.error("No se pudo registrar en la bitácora de Supabase:", error.message); mostrarEstadoSync("La bitácora no se pudo guardar en la nube", "error"); }
+    let panel = document.getElementById("panelBitacora");
+    if (panel && panel.classList.contains("active")) renderBitacora();
 }
 
 /* ---- Identidad de quien usa la app ahora mismo (para poder trazar quién hizo qué) ---- */
@@ -1045,10 +1123,6 @@ function obtenerUsuarioActual() {
 }
 
 /* ---- Bitácora: se registra cada creación, edición o eliminación, con quién y cuándo ---- */
-function registrarBitacora(accion, detalle) {
-    bitacora.push({ fecha: new Date().toISOString(), usuario: obtenerUsuarioActual(), accion, detalle });
-    localStorage.setItem("insp_bitacora", JSON.stringify(bitacora));
-}
 function renderBitacora() {
     let tbody = document.getElementById("tbodyBitacora");
     if (bitacora.length === 0) {
@@ -1270,7 +1344,7 @@ function renderCatalogoTipos() {
     renderListaColumnasEvaluacionTemp();
 }
 
-function agregarTipoInspeccion() {
+async function agregarTipoInspeccion() {
     if (!exigirSuperAdmin("Solo el Super Admin puede crear o editar tipos de inspección.")) return;
 
     let nombre = document.getElementById("fTipoNombre").value.trim();
@@ -1319,12 +1393,15 @@ function agregarTipoInspeccion() {
         detalleTipo = `${columnasEvaluacionTemp.length} columna(s) de evaluación (muestreo)`;
     }
 
+    mostrarEstadoSync("Guardando en la nube...", "cargando");
     if (tipoEditandoEsIntegrado && tipoCustomEditandoId) {
         // Se está editando un formulario integrado (preguntas y/o puntuación) → se guarda como override, no se toca el original.
         delete tipoBase.empresas; // mantenemos las empresas tal cual las eligió en el formulario (sí se puede cambiar)
         tipoBase.empresas = empresasElegidas;
+        let { error } = await sb.from("tipos_overrides").upsert({ tipo_id: tipoCustomEditandoId, definicion: tipoBase }, { onConflict: "tipo_id" });
+        if (error) { mostrarEstadoSync("No se pudo guardar: " + error.message, "error"); alert("No se pudo guardar en Supabase: " + error.message); return; }
+        mostrarEstadoSync("Guardado en la nube", "ok");
         overridesTipos[tipoCustomEditandoId] = tipoBase;
-        guardarOverridesEnStorage();
         registrarBitacora("Edición de tipo integrado", `"${nombre}" personalizado por Super Admin (${detalleTipo}, aplica a ${empresasElegidas.join(", ")})`);
         tipoCustomEditandoId = null;
         tipoEditandoEsIntegrado = false;
@@ -1334,16 +1411,20 @@ function agregarTipoInspeccion() {
         let idx = tiposCustom.findIndex(t => t.id === tipoCustomEditandoId);
         if (idx === -1) { alert("Este tipo ya no existe."); tipoCustomEditandoId = null; return; }
         tipoBase.id = tipoCustomEditandoId;
+        let { error } = await sb.from("tipos_custom").update({ definicion: tipoBase }).eq("id", tipoCustomEditandoId);
+        if (error) { mostrarEstadoSync("No se pudo guardar: " + error.message, "error"); alert("No se pudo guardar en Supabase: " + error.message); return; }
+        mostrarEstadoSync("Guardado en la nube", "ok");
         tiposCustom[idx] = tipoBase;
-        guardarTiposEnStorage();
         registrarBitacora("Edición de tipo", `"${nombre}" actualizado en el catálogo (${detalleTipo}, aplica a ${empresasElegidas.join(", ")})`);
         tipoCustomEditandoId = null;
         document.getElementById("btnGuardarTipo").innerText = "➕ Agregar al catálogo";
         alert(`"${nombre}" fue actualizado.`);
     } else {
         tipoBase.id = "tipo_" + Date.now();
+        let { error } = await sb.from("tipos_custom").insert({ id: tipoBase.id, definicion: tipoBase });
+        if (error) { mostrarEstadoSync("No se pudo guardar: " + error.message, "error"); alert("No se pudo guardar en Supabase: " + error.message); return; }
+        mostrarEstadoSync("Guardado en la nube", "ok");
         tiposCustom.push(tipoBase);
-        guardarTiposEnStorage();
         registrarBitacora("Alta de tipo", `"${nombre}" agregado al catálogo (${detalleTipo}, aplica a ${empresasElegidas.join(", ")})`);
         alert(`"${nombre}" agregada al catálogo.`);
     }
@@ -1424,44 +1505,56 @@ function cancelarEdicionTipo() {
     document.getElementById("btnGuardarTipo").innerText = "➕ Agregar al catálogo";
 }
 
-function eliminarTipoCustom(id) {
+async function eliminarTipoCustom(id) {
     if (!exigirSuperAdmin("Solo el Super Admin puede eliminar tipos de inspección.")) return;
     let tipo = tiposCustom.find(t => t.id === id);
     if (!tipo) return;
     if (!confirm("¿Eliminar este tipo de inspección del catálogo? Las inspecciones ya guardadas con este tipo no se borran.")) return;
+    mostrarEstadoSync("Eliminando de la nube...", "cargando");
+    let { error } = await sb.from("tipos_custom").delete().eq("id", id);
+    if (error) { mostrarEstadoSync("No se pudo eliminar: " + error.message, "error"); alert("No se pudo eliminar en Supabase: " + error.message); return; }
+    mostrarEstadoSync("Eliminado de la nube", "ok");
     tiposCustom = tiposCustom.filter(t => t.id !== id);
-    guardarTiposEnStorage();
     registrarBitacora("Baja de tipo", `"${tipo.nombre}" eliminado del catálogo`);
     renderCatalogoTipos();
 }
 
-function restablecerTipoIntegrado(id) {
+async function restablecerTipoIntegrado(id) {
     if (!exigirSuperAdmin("Solo el Super Admin puede restablecer un tipo de inspección.")) return;
     if (!overridesTipos[id]) return;
     if (!confirm("¿Restablecer este formulario a sus preguntas y puntuación originales? Se perderá la personalización.")) return;
     let nombre = tipoPorId(id).nombre;
+    mostrarEstadoSync("Guardando en la nube...", "cargando");
+    let { error } = await sb.from("tipos_overrides").delete().eq("tipo_id", id);
+    if (error) { mostrarEstadoSync("No se pudo restablecer: " + error.message, "error"); alert("No se pudo restablecer en Supabase: " + error.message); return; }
+    mostrarEstadoSync("Guardado en la nube", "ok");
     delete overridesTipos[id];
-    guardarOverridesEnStorage();
     registrarBitacora("Restablecer tipo integrado", `"${nombre}" vuelve a su versión original`);
     renderCatalogoTipos();
 }
 
-function eliminarTipoIntegrado(id) {
+async function eliminarTipoIntegrado(id) {
     if (!exigirSuperAdmin("Solo el Super Admin puede eliminar tipos de inspección.")) return;
     let tipo = tipoPorId(id);
     if (!tipo) return;
     if (!confirm(`¿Quitar "${tipo.nombre}" del catálogo activo? Las inspecciones ya guardadas con este tipo NO se borran y siguen viéndose en el historial. Puedes restaurarlo cuando quieras desde "Tipos ocultos".`)) return;
+    mostrarEstadoSync("Guardando en la nube...", "cargando");
+    let { error } = await sb.from("tipos_ocultos").insert({ tipo_id: id });
+    if (error) { mostrarEstadoSync("No se pudo ocultar: " + error.message, "error"); alert("No se pudo ocultar en Supabase: " + error.message); return; }
+    mostrarEstadoSync("Guardado en la nube", "ok");
     tiposIntegradosOcultos.push(id);
-    guardarOcultosEnStorage();
     registrarBitacora("Baja de tipo", `"${tipo.nombre}" quitado del catálogo activo`);
     renderCatalogoTipos();
 }
 
-function restaurarTipoIntegrado(id) {
+async function restaurarTipoIntegrado(id) {
     if (!exigirSuperAdmin("Solo el Super Admin puede restaurar tipos de inspección.")) return;
     let tipo = TIPOS_INTEGRADOS_BASE.find(t => t.id === id);
+    mostrarEstadoSync("Guardando en la nube...", "cargando");
+    let { error } = await sb.from("tipos_ocultos").delete().eq("tipo_id", id);
+    if (error) { mostrarEstadoSync("No se pudo restaurar: " + error.message, "error"); alert("No se pudo restaurar en Supabase: " + error.message); return; }
+    mostrarEstadoSync("Guardado en la nube", "ok");
     tiposIntegradosOcultos = tiposIntegradosOcultos.filter(x => x !== id);
-    guardarOcultosEnStorage();
     registrarBitacora("Restaurar tipo", `"${tipo ? tipo.nombre : id}" vuelve a aparecer en el catálogo`);
     renderCatalogoTipos();
 }
@@ -1613,58 +1706,75 @@ function renderPerfil() {
     document.getElementById("perfilPasswordError").style.display = "none";
 }
 
-function cambiarFotoPerfil(input) {
+async function cambiarFotoPerfil(input) {
     let file = input.files[0];
     if (!file) return;
     let reader = new FileReader();
     reader.onload = function(e) {
         let img = new Image();
-        img.onload = function() {
+        img.onload = async function() {
             let maxW = 320;
             let escala = Math.min(1, maxW / img.width);
             let canvas = document.createElement("canvas");
             canvas.width = img.width * escala;
             canvas.height = img.height * escala;
             canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-            let dataUrl = canvas.toDataURL("image/jpeg", 0.75);
-            perfiles[sesionActual.usuario] = perfiles[sesionActual.usuario] || {};
-            perfiles[sesionActual.usuario].foto = dataUrl;
-            guardarPerfilesEnStorage();
-            renderPerfil();
-            entrarAlApp();
-            mostrarTab("perfil");
+            canvas.toBlob(async function(blob) {
+                mostrarEstadoSync("Subiendo foto...", "cargando");
+                let ruta = `${sesionActual.authId}.jpg`;
+                let { error: errSubida } = await sb.storage.from("avatares").upload(ruta, blob, { upsert:true, contentType:"image/jpeg" });
+                if (errSubida) { mostrarEstadoSync("No se pudo subir: " + errSubida.message, "error"); alert("No se pudo subir la foto: " + errSubida.message); return; }
+                let { data: pub } = sb.storage.from("avatares").getPublicUrl(ruta);
+                let fotoUrl = pub.publicUrl + "?t=" + Date.now(); // evita que quede en caché la foto vieja
+                let { error } = await sb.from("perfiles").upsert({ usuario_id: sesionActual.authId, foto_url: fotoUrl }, { onConflict:"usuario_id" });
+                if (error) { mostrarEstadoSync("No se pudo guardar: " + error.message, "error"); alert("No se pudo guardar en Supabase: " + error.message); return; }
+                mostrarEstadoSync("Foto de perfil actualizada", "ok");
+                perfiles[sesionActual.usuario] = perfiles[sesionActual.usuario] || {};
+                perfiles[sesionActual.usuario].foto = fotoUrl;
+                renderPerfil();
+                entrarAlApp();
+                mostrarTab("perfil");
+            }, "image/jpeg", 0.75);
         };
         img.src = e.target.result;
     };
     reader.readAsDataURL(file);
 }
 
-function quitarFotoPerfil() {
-    if (perfiles[sesionActual.usuario]) { delete perfiles[sesionActual.usuario].foto; guardarPerfilesEnStorage(); }
+async function quitarFotoPerfil() {
+    mostrarEstadoSync("Guardando en la nube...", "cargando");
+    let { error } = await sb.from("perfiles").upsert({ usuario_id: sesionActual.authId, foto_url: null }, { onConflict:"usuario_id" });
+    if (error) { mostrarEstadoSync("No se pudo actualizar: " + error.message, "error"); alert("No se pudo actualizar en Supabase: " + error.message); return; }
+    mostrarEstadoSync("Guardado en la nube", "ok");
+    if (perfiles[sesionActual.usuario]) delete perfiles[sesionActual.usuario].foto;
     renderPerfil();
     entrarAlApp();
     mostrarTab("perfil");
 }
 
-function cambiarTema(tema) {
+async function cambiarTema(tema) {
+    mostrarEstadoSync("Guardando en la nube...", "cargando");
+    let { error } = await sb.from("perfiles").upsert({ usuario_id: sesionActual.authId, tema }, { onConflict:"usuario_id" });
+    if (error) { mostrarEstadoSync("No se pudo guardar: " + error.message, "error"); alert("No se pudo guardar en Supabase: " + error.message); return; }
+    mostrarEstadoSync("Guardado en la nube", "ok");
     perfiles[sesionActual.usuario] = perfiles[sesionActual.usuario] || {};
     perfiles[sesionActual.usuario].tema = tema;
-    guardarPerfilesEnStorage();
     document.body.classList.toggle("tema-oscuro", tema === "oscuro");
     renderPerfil();
 }
 
-function cambiarPasswordPerfil() {
+async function cambiarPasswordPerfil() {
     let nueva = document.getElementById("fPerfilPasswordNueva").value;
     let confirmar = document.getElementById("fPerfilPasswordConfirmar").value;
     let error = document.getElementById("perfilPasswordError");
     if (nueva.length < 6) { error.innerText = "La contraseña debe tener al menos 6 caracteres."; error.style.display = "block"; return; }
     if (nueva !== confirmar) { error.innerText = "Las contraseñas no coinciden."; error.style.display = "block"; return; }
-    perfiles[sesionActual.usuario] = perfiles[sesionActual.usuario] || {};
-    perfiles[sesionActual.usuario].passwordOverride = nueva;
-    guardarPerfilesEnStorage();
+    mostrarEstadoSync("Actualizando contraseña...", "cargando");
+    let { error: errAuth } = await sb.auth.updateUser({ password: nueva });
+    if (errAuth) { mostrarEstadoSync("No se pudo actualizar: " + errAuth.message, "error"); error.innerText = "No se pudo actualizar: " + errAuth.message; error.style.display = "block"; return; }
+    mostrarEstadoSync("Contraseña actualizada", "ok");
     error.style.display = "none";
-    alert("Contraseña actualizada. Úsala la próxima vez que inicies sesión en este navegador.");
+    alert("Contraseña actualizada. Ya puedes usarla la próxima vez que inicies sesión, desde cualquier dispositivo.");
     document.getElementById("fPerfilPasswordNueva").value = "";
     document.getElementById("fPerfilPasswordConfirmar").value = "";
 }
@@ -1690,10 +1800,9 @@ function actualizarEspecifique(id, valor) {
     inspeccionActual.items[id].especifique = valor;
 }
 
-// La foto se comprime a un ancho máximo de 900px y calidad JPEG 0.6 antes de guardarse en
-// base64. Esto es clave porque hoy todo vive en localStorage del navegador (límite ~5-10MB) —
-// cuando Joan conecte Supabase, lo ideal es mover estas fotos a Supabase Storage y guardar
-// solo la URL aquí, para no llenar el localStorage del navegador.
+// La foto se comprime a un ancho máximo de 900px y calidad JPEG 0.6, y se sube al bucket
+// "evidencias" de Supabase Storage. Lo que se guarda en el registro es solo la URL pública,
+// no la imagen — así no se llena el navegador ni la base de datos de base64.
 function adjuntarFoto(id, input) {
     let file = input.files[0];
     if (!file) return;
@@ -1707,19 +1816,26 @@ function adjuntarFoto(id, input) {
             canvas.width = img.width * escala;
             canvas.height = img.height * escala;
             canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-            let dataUrl = canvas.toDataURL("image/jpeg", 0.6);
-            inspeccionActual.items[id].foto = dataUrl;
-            mostrarPreviewFoto(id, dataUrl);
+            canvas.toBlob(async function(blob) {
+                mostrarEstadoSync("Subiendo evidencia...", "cargando");
+                let ruta = `${sesionActual.usuario}/${Date.now()}_item${id}.jpg`;
+                let { error } = await sb.storage.from("evidencias").upload(ruta, blob, { contentType:"image/jpeg" });
+                if (error) { mostrarEstadoSync("No se pudo subir: " + error.message, "error"); alert("No se pudo subir la foto: " + error.message); return; }
+                let { data: pub } = sb.storage.from("evidencias").getPublicUrl(ruta);
+                mostrarEstadoSync("Evidencia subida", "ok");
+                inspeccionActual.items[id].foto = pub.publicUrl;
+                mostrarPreviewFoto(id, pub.publicUrl);
+            }, "image/jpeg", 0.6);
         };
         img.src = e.target.result;
     };
     reader.readAsDataURL(file);
 }
-function mostrarPreviewFoto(id, dataUrl) {
+function mostrarPreviewFoto(id, url) {
     let wrap = document.getElementById(`fotoPreviewWrap_${id}`);
     let img = document.getElementById(`fotoPreview_${id}`);
     if (!wrap || !img) return;
-    img.src = dataUrl;
+    img.src = url;
     wrap.style.display = "block";
 }
 function quitarFoto(id) {
@@ -1871,7 +1987,7 @@ function actualizarPuntajeVivo() {
     document.getElementById("gaugeVivoTexto").innerText = r.pct.toFixed(0) + "%";
 }
 
-function guardarInspeccion() {
+async function guardarInspeccion() {
     if (!exigirNoAuditor("Tu usuario (Auditor/a) es de solo lectura y no puede guardar inspecciones.")) return;
     inspeccionActual.nave = document.getElementById("fNuevaNave").value.trim();
     inspeccionActual.realizadoPor = document.getElementById("fNuevaRealizadoPor").value.trim();
@@ -1895,22 +2011,38 @@ function guardarInspeccion() {
     // formulario cambia más adelante, las inspecciones viejas no cambien de puntaje solas.
     inspeccionActual.resumen = calcularPuntaje(inspeccionActual);
 
+    let btnGuardar = document.getElementById("btnGuardarInspeccion");
+    if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.innerText = "Guardando..."; }
+    mostrarEstadoSync("Guardando inspección en la nube...", "cargando");
+
+    let filaSupabase = {
+        tipo_id: inspeccionActual.tipoId, empresa: inspeccionActual.empresa, nave: inspeccionActual.nave,
+        realizado_por: inspeccionActual.realizadoPor, fecha: inspeccionActual.fecha, hora_inicio: inspeccionActual.horaInicio,
+        lugar_inicio: inspeccionActual.lugarInicio, observaciones: inspeccionActual.observaciones,
+        campo_adicional: inspeccionActual.campoAdicional || null, items: inspeccionActual.items || null,
+        filas: inspeccionActual.filas || null, resumen: inspeccionActual.resumen, creado_por: sesionActual.nombre
+    };
+
     if (inspeccionEditandoId) {
-        inspeccionActual.id = inspeccionEditandoId;
         let idx = inspecciones.findIndex(i => i.id === inspeccionEditandoId);
         let anterior = inspecciones[idx];
-        inspeccionActual.creadaEn = anterior.creadaEn;
-        inspeccionActual.editadaEn = new Date().toISOString();
+        let { error } = await sb.from("inspecciones").update(filaSupabase).eq("id", inspeccionEditandoId);
+        if (btnGuardar) { btnGuardar.disabled = false; btnGuardar.innerText = "💾 Guardar inspección"; }
+        if (error) { mostrarEstadoSync("No se pudo guardar: " + error.message, "error"); alert("No se pudo guardar en Supabase: " + error.message); return; }
+        mostrarEstadoSync("Inspección actualizada en la nube", "ok");
+        inspeccionActual.id = inspeccionEditandoId;
         inspecciones[idx] = inspeccionActual;
-        guardarEnStorage();
         registrarBitacora("Edición", `${tipo.nombre} — ${inspeccionActual.empresa} · ${inspeccionActual.nave} · ${inspeccionActual.fecha} (${anterior.resumen.pct.toFixed(0)}% → ${inspeccionActual.resumen.pct.toFixed(0)}%)`);
         inspeccionEditandoId = null;
         alert(`Inspección actualizada — ${inspeccionActual.resumen.pct.toFixed(0)}% (${inspeccionActual.resumen.nivel})`);
     } else {
-        inspeccionActual.id = "insp_" + Date.now();
-        inspeccionActual.creadaEn = new Date().toISOString();
+        let { data, error } = await sb.from("inspecciones").insert(filaSupabase).select().single();
+        if (btnGuardar) { btnGuardar.disabled = false; btnGuardar.innerText = "💾 Guardar inspección"; }
+        if (error) { mostrarEstadoSync("No se pudo guardar: " + error.message, "error"); alert("No se pudo guardar en Supabase: " + error.message); return; }
+        mostrarEstadoSync("Inspección guardada en la nube", "ok");
+        inspeccionActual.id = data.id;
+        inspeccionActual.creadaEn = data.creado_en;
         inspecciones.push(inspeccionActual);
-        guardarEnStorage();
         registrarBitacora("Creación", `${tipo.nombre} — ${inspeccionActual.empresa} · ${inspeccionActual.nave} · ${inspeccionActual.fecha} (${inspeccionActual.resumen.pct.toFixed(0)}%, ${inspeccionActual.resumen.nivel})`);
         alert(`Inspección guardada — ${inspeccionActual.resumen.pct.toFixed(0)}% (${inspeccionActual.resumen.nivel})`);
     }
@@ -2197,14 +2329,17 @@ function generarReporteEjecutivo() {
     doc.save(`Reporte_Ejecutivo_${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
-function eliminarInspeccion(id) {
+async function eliminarInspeccion(id) {
     if (!exigirNoAuditor("Tu usuario (Auditor/a) es de solo lectura y no puede eliminar inspecciones.")) return;
     let insp = inspecciones.find(i => i.id === id);
     if (!insp) return;
     if (!confirm("¿Eliminar esta inspección? No se puede deshacer.")) return;
     let tipo = tipoPorId(insp.tipoId);
+    mostrarEstadoSync("Eliminando de la nube...", "cargando");
+    let { error } = await sb.from("inspecciones").delete().eq("id", id);
+    if (error) { mostrarEstadoSync("No se pudo eliminar: " + error.message, "error"); alert("No se pudo eliminar en Supabase: " + error.message); return; }
+    mostrarEstadoSync("Eliminado de la nube", "ok");
     inspecciones = inspecciones.filter(i => i.id !== id);
-    guardarEnStorage();
     registrarBitacora("Eliminación", `${tipo ? tipo.nombre : insp.tipoId} — ${insp.empresa} · ${insp.nave} · ${insp.fecha} (era ${insp.resumen.pct.toFixed(0)}%, ${insp.resumen.nivel})`);
     renderHistorial();
 }
