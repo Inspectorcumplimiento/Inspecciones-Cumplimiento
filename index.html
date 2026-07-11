@@ -1147,6 +1147,19 @@ function exigirNoAuditor(mensaje) {
     if (esAuditor()) { alert(mensaje || "Tu usuario (Auditor/a) es de solo lectura y no puede hacer cambios."); return false; }
     return true;
 }
+// Un registro solo lo puede editar/borrar quien lo creó (comparando por nombre de sesión) o el Super Admin.
+function esDuenoDeInspeccion(insp) {
+    return !!(sesionActual && insp && insp.creadoPor && insp.creadoPor === sesionActual.nombre);
+}
+function puedeModificarInspeccion(insp) {
+    return esSuperAdmin() || esDuenoDeInspeccion(insp);
+}
+function exigirPermisoSobreInspeccion(insp, mensaje) {
+    if (!exigirNoAuditor()) return false;
+    if (puedeModificarInspeccion(insp)) return true;
+    alert(mensaje || "Solo puedes editar o eliminar inspecciones que tú mismo registraste. Esta la registró otro usuario.");
+    return false;
+}
 
 /* ==================== ESTADO ==================== */
 // Ya no se inicializa desde localStorage: se llena de forma asíncrona con
@@ -2161,9 +2174,9 @@ async function guardarInspeccion() {
 }
 
 function editarInspeccion(id) {
-    if (!exigirNoAuditor("Tu usuario (Auditor/a) es de solo lectura y no puede editar inspecciones.")) return;
     let insp = inspecciones.find(i => i.id === id);
     if (!insp) return;
+    if (!exigirPermisoSobreInspeccion(insp)) return;
     let tipo = tipoPorId(insp.tipoId);
     if (!tipo) { alert("El tipo de inspección de este registro ya no existe en el catálogo."); return; }
 
@@ -2248,8 +2261,8 @@ function renderHistorial() {
             <td><span class="badge-nivel ${claseNivel(insp.resumen.nivel)}">${insp.resumen.nivel}</span></td>
             <td>
                 <button class="btn-chico" onclick="verDetalleInspeccion('${insp.id}')">Ver</button>
-                ${esAuditor() ? "" : `<button class="btn-chico" onclick="editarInspeccion('${insp.id}')">Editar</button>
-                ${esSuperAdmin() ? `<button class="btn-chico rojo" onclick="eliminarInspeccion('${insp.id}')">Eliminar</button>` : ""}`}
+                ${(!esAuditor() && puedeModificarInspeccion(insp)) ? `<button class="btn-chico" onclick="editarInspeccion('${insp.id}')">Editar</button>
+                <button class="btn-chico rojo" onclick="eliminarInspeccion('${insp.id}')">Eliminar</button>` : ""}
             </td>
         </tr>
     `;
@@ -2440,9 +2453,9 @@ function generarReporteEjecutivo() {
 }
 
 async function eliminarInspeccion(id) {
-    if (!exigirSuperAdmin("Solo Victor Torres (Super Admin) puede eliminar inspecciones ya realizadas.")) return;
     let insp = inspecciones.find(i => i.id === id);
     if (!insp) return;
+    if (!exigirPermisoSobreInspeccion(insp, "Solo puedes eliminar inspecciones que tú mismo registraste. Esta la registró otro usuario. El Super Admin (Victor Torres) sí puede eliminar cualquiera.")) return;
     if (!confirm("¿Eliminar esta inspección? No se puede deshacer.")) return;
     let tipo = tipoPorId(insp.tipoId);
     mostrarEstadoSync("Eliminando de la nube...", "cargando");
