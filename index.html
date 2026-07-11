@@ -1251,6 +1251,7 @@ function renderBitacora() {
 /* ==================== NAVEGACIÓN DE TABS ==================== */
 function mostrarTab(id) {
     if (id === "tipos" && !esSuperAdmin()) { alert("Solo el Super Admin puede entrar a Tipos de Inspección."); id = "inicio"; }
+    if ((id === "nueva" || id === "inicio") && esAuditor()) { alert("Tu usuario (Auditor/a) es de solo lectura: no puede hacer ni editar inspecciones."); id = "historial"; }
     document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
     document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
     document.getElementById("panel" + id.charAt(0).toUpperCase() + id.slice(1)).classList.add("active");
@@ -1294,6 +1295,7 @@ function poblarSelectorTipoPorEmpresa() {
 }
 
 function empezarInspeccionDesdeInicio() {
+    if (!exigirNoAuditor("Tu usuario (Auditor/a) es de solo lectura y no puede iniciar inspecciones.")) return;
     let empresa = document.getElementById("fInicioEmpresa").value;
     let tipoId = document.getElementById("fInicioTipo").value;
     if (!empresa) { alert("Elige una empresa."); return; }
@@ -2247,7 +2249,7 @@ function renderHistorial() {
             <td>
                 <button class="btn-chico" onclick="verDetalleInspeccion('${insp.id}')">Ver</button>
                 ${esAuditor() ? "" : `<button class="btn-chico" onclick="editarInspeccion('${insp.id}')">Editar</button>
-                <button class="btn-chico rojo" onclick="eliminarInspeccion('${insp.id}')">Eliminar</button>`}
+                ${esSuperAdmin() ? `<button class="btn-chico rojo" onclick="eliminarInspeccion('${insp.id}')">Eliminar</button>` : ""}`}
             </td>
         </tr>
     `;
@@ -2438,7 +2440,7 @@ function generarReporteEjecutivo() {
 }
 
 async function eliminarInspeccion(id) {
-    if (!exigirNoAuditor("Tu usuario (Auditor/a) es de solo lectura y no puede eliminar inspecciones.")) return;
+    if (!exigirSuperAdmin("Solo Victor Torres (Super Admin) puede eliminar inspecciones ya realizadas.")) return;
     let insp = inspecciones.find(i => i.id === id);
     if (!insp) return;
     if (!confirm("¿Eliminar esta inspección? No se puede deshacer.")) return;
