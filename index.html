@@ -1147,9 +1147,12 @@ function exigirNoAuditor(mensaje) {
     if (esAuditor()) { alert(mensaje || "Tu usuario (Auditor/a) es de solo lectura y no puede hacer cambios."); return false; }
     return true;
 }
-// Un registro solo lo puede editar/borrar quien lo creó (comparando por nombre de sesión) o el Super Admin.
+// Un registro solo lo puede editar/borrar quien lo creó (por uid de Auth; si el registro es
+// viejo y no tiene uid guardado, se usa el nombre como respaldo) o el Super Admin.
 function esDuenoDeInspeccion(insp) {
-    return !!(sesionActual && insp && insp.creadoPor && insp.creadoPor === sesionActual.nombre);
+    if (!sesionActual || !insp) return false;
+    if (insp.creadoPorUid) return insp.creadoPorUid === sesionActual.authId;
+    return !!(insp.creadoPor && insp.creadoPor === sesionActual.nombre);
 }
 function puedeModificarInspeccion(insp) {
     return esSuperAdmin() || esDuenoDeInspeccion(insp);
@@ -1198,7 +1201,7 @@ function mapearInspeccionDesdeSupabase(row) {
         realizadoPor: row.realizado_por, fecha: row.fecha, horaInicio: row.hora_inicio,
         lugarInicio: row.lugar_inicio, observaciones: row.observaciones,
         campoAdicional: row.campo_adicional, items: row.items || null, filas: row.filas || null,
-        resumen: row.resumen, creadaEn: row.creado_en, creadoPor: row.creado_por
+        resumen: row.resumen, creadaEn: row.creado_en, creadoPor: row.creado_por, creadoPorUid: row.creado_por_uid
     };
 }
 
@@ -2143,8 +2146,15 @@ async function guardarInspeccion() {
         realizado_por: inspeccionActual.realizadoPor, fecha: inspeccionActual.fecha, hora_inicio: inspeccionActual.horaInicio,
         lugar_inicio: inspeccionActual.lugarInicio, observaciones: inspeccionActual.observaciones,
         campo_adicional: inspeccionActual.campoAdicional || null, items: inspeccionActual.items || null,
-        filas: inspeccionActual.filas || null, resumen: inspeccionActual.resumen, creado_por: sesionActual.nombre
+        filas: inspeccionActual.filas || null, resumen: inspeccionActual.resumen
     };
+    // El autor original (nombre + uid de Auth) solo se fija al crear el registro. Al editar
+    // NO se toca, para no "robarle" la autoría a quien lo hizo — así Victor puede editar
+    // el registro de otra persona sin volverse su dueño.
+    if (!inspeccionEditandoId) {
+        filaSupabase.creado_por = sesionActual.nombre;
+        filaSupabase.creado_por_uid = sesionActual.authId;
+    }
 
     if (inspeccionEditandoId) {
         let idx = inspecciones.findIndex(i => i.id === inspeccionEditandoId);
